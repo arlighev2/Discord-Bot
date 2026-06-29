@@ -1044,6 +1044,43 @@ async function registerCommands(client: Client) {
       .setName("level")
       .setDescription("View your rank card and XP progress")
       .addUserOption((o) => o.setName("user").setDescription("User to check (defaults to you)").setRequired(false)),
+    new SlashCommandBuilder()
+      .setName("spawner")
+      .setDescription("Manage spawner stock and prices (staff only)")
+      .addSubcommand((sub) =>
+        sub
+          .setName("add")
+          .setDescription("Add to a spawner's stock count")
+          .addStringOption((o) => o.setName("type").setDescription("Spawner type e.g. Skeleton, Iron Golem").setRequired(true))
+          .addIntegerOption((o) => o.setName("amount").setDescription("Number to add").setRequired(true).setMinValue(1)),
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName("remove")
+          .setDescription("Remove from a spawner's stock count")
+          .addStringOption((o) => o.setName("type").setDescription("Spawner type e.g. Skeleton, Iron Golem").setRequired(true))
+          .addIntegerOption((o) => o.setName("amount").setDescription("Number to remove").setRequired(true).setMinValue(1)),
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName("setprice")
+          .setDescription("Set a spawner's buy or sell price")
+          .addStringOption((o) => o.setName("type").setDescription("Spawner type e.g. Skeleton").setRequired(true))
+          .addStringOption((o) =>
+            o.setName("side").setDescription("buy or sell").setRequired(true)
+              .addChoices({ name: "buy", value: "buy" }, { name: "sell", value: "sell" }),
+          )
+          .addStringOption((o) => o.setName("price").setDescription('Price e.g. 3.3m, 500k — or "none" to remove').setRequired(true)),
+      )
+      .addSubcommand((sub) =>
+        sub.setName("list").setDescription("Show all spawner types with current prices and stock"),
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName("new")
+          .setDescription("Add a new spawner type")
+          .addStringOption((o) => o.setName("name").setDescription("Spawner name e.g. Blaze").setRequired(true)),
+      ),
   ].map((c) => c.toJSON());
 
   try {
@@ -1946,6 +1983,89 @@ async function handleCommand(i: ChatInputCommandInteraction) {
       return;
     }
   }
+
+  if (commandName === "spawner") {
+    if (!guild) return;
+    const member = i.member as GuildMember;
+    if (!isStaff(member) && !isOwnerOrCoOwner(member)) {
+      await i.reply({ embeds: [errEmbed("Only staff can manage spawner data.")], flags: 64 });
+      return;
+    }
+    const sub = i.options.getSubcommand();
+
+    if (sub === "list") {
+      const spawners = storage.getSpawners();
+      const entries = Object.entries(spawners);
+      if (entries.length === 0) {
+        await i.reply({ embeds: [infoEmbed("No spawner types configured.")], flags: 64 });
+        return;
+      }
+      const fields = entries.map(([name, s]) => ({
+        name: `${name} Spawners`,
+        value: `Buy: **${s.buyPrice ?? "—"}** | Sell: **${s.sellPrice ?? "—"}** | Stock: **${s.stock}**`,
+        inline: false,
+      }));
+      await i.reply({
+        embeds: [new EmbedBuilder().setColor(SKELLY_CATEGORY.color).setTitle("Spawner Prices & Stock").addFields(...fields).setTimestamp()],
+        flags: 64,
+      });
+      return;
+    }
+
+    if (sub === "add" || sub === "remove") {
+      const typeName = i.options.getString("type", true).trim();
+      const amount = i.options.getInteger("amount", true);
+      const delta = sub === "add" ? amount : -amount;
+      const result = storage.updateSpawnerStock(typeName, delta);
+      if (!result) {
+        await i.reply({ embeds: [errEmbed(`No spawner type matching **${typeName}** found. Use \`/spawner list\` to see available types, or \`/spawner new\` to add one.`)], flags: 64 });
+        return;
+      }
+      const verb = sub === "add" ? "Added" : "Removed";
+      await i.reply({
+        embeds: [okEmbed(`${verb} **${amount}** to **${result.key} Spawners** stock.\nNew stock: **${result.data.stock}**`)],
+        flags: 64,
+      });
+      return;
+    }
+
+    if (sub === "setprice") {
+      if (!isOwnerOrCoOwner(member)) {
+        await i.reply({ embeds: [errEmbed("Only the Owner or Co-Owner can change prices.")], flags: 64 });
+        return;
+      }
+      const typeName = i.options.getString("type", true).trim();
+      const side = i.options.getString("side", true) as "buy" | "sell";
+      const priceRaw = i.options.getString("price", true).trim();
+      const price = priceRaw.toLowerCase() === "none" ? null : priceRaw;
+      const result = storage.setSpawnerPrice(typeName, side, price);
+      if (!result) {
+        await i.reply({ embeds: [errEmbed(`No spawner type matching **${typeName}** found. Use \`/spawner new\` to add it first.`)], flags: 64 });
+        return;
+      }
+      const displayPrice = price === null ? "removed" : `set to **${price}**`;
+      await i.reply({
+        embeds: [okEmbed(`**${result.key} Spawners** ${side} price ${displayPrice}.`)],
+        flags: 64,
+      });
+      return;
+    }
+
+    if (sub === "new") {
+      if (!isOwnerOrCoOwner(member)) {
+        await i.reply({ embeds: [errEmbed("Only the Owner or Co-Owner can add spawner types.")], flags: 64 });
+        return;
+      }
+      const name = i.options.getString("name", true).trim();
+      const added = storage.addSpawnerType(name);
+      if (!added) {
+        await i.reply({ embeds: [errEmbed(`A spawner type matching **${name}** already exists.`)], flags: 64 });
+        return;
+      }
+      await i.reply({ embeds: [okEmbed(`Added **${name} Spawners** to the list. Use \`/spawner setprice\` to configure prices.`)], flags: 64 });
+      return;
+    }
+  }
 }
 
 // ─── Message → Interaction Adapter ──────────────────────────────────────────
@@ -2318,7 +2438,7 @@ async function handleButton(i: ButtonInteraction) {
         return;
       }
       await i.reply({
-        embeds: [new EmbedBuilder().setColor(SKELLY_CATEGORY.color).setTitle("Spawner Tickets").setDescription(`${SKELLY_PRICE_TEXT}\n\nChoose an option below:`)],
+        embeds: [new EmbedBuilder().setColor(SKELLY_CATEGORY.color).setTitle("Spawner Tickets").setDescription(`${getSkellyPriceText()}\n\nChoose an option below:`)],
         components: [
           new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder().setCustomId("skelly_buy").setLabel("Buy Spawners").setStyle(ButtonStyle.Success),
@@ -3165,7 +3285,7 @@ async function handleStringSelect(i: StringSelectMenuInteraction) {
         return;
       }
       await i.reply({
-        embeds: [new EmbedBuilder().setColor(SKELLY_CATEGORY.color).setTitle("Spawner Tickets").setDescription(`${SKELLY_PRICE_TEXT}\n\nChoose an option below:`)],
+        embeds: [new EmbedBuilder().setColor(SKELLY_CATEGORY.color).setTitle("Spawner Tickets").setDescription(`${getSkellyPriceText()}\n\nChoose an option below:`)],
         components: [
           new ActionRowBuilder<ButtonBuilder>().addComponents(
             new ButtonBuilder().setCustomId("skelly_buy").setLabel("Buy Spawners").setStyle(ButtonStyle.Success),
@@ -3191,7 +3311,7 @@ async function handleStringSelect(i: StringSelectMenuInteraction) {
       return;
     }
     await i.reply({
-      embeds: [new EmbedBuilder().setColor(SKELLY_CATEGORY.color).setTitle("Spawner Tickets").setDescription(`${SKELLY_PRICE_TEXT}\n\nChoose an option below:`)],
+      embeds: [new EmbedBuilder().setColor(SKELLY_CATEGORY.color).setTitle("Spawner Tickets").setDescription(`${getSkellyPriceText()}\n\nChoose an option below:`)],
       components: [
         new ActionRowBuilder<ButtonBuilder>().addComponents(
           new ButtonBuilder().setCustomId("skelly_buy").setLabel("Buy Spawners").setStyle(ButtonStyle.Success),
@@ -3731,7 +3851,7 @@ async function handleModal(i: ModalSubmitInteraction) {
     const welcomeEmbed = new EmbedBuilder()
       .setColor(SKELLY_CATEGORY.color)
       .setTitle(`${isBuying ? "Buying" : "Selling"} Spawners: ${ticketTag(ticketNum)}`)
-      .setDescription(`${SKELLY_PRICE_TEXT}\n\nSee <#1518633695404101773> for more info - [click here](${SKELLY_PRICE_CHANNEL})`)
+      .setDescription(`${getSkellyPriceText()}\n\nSee <#1518633695404101773> for more info - [click here](${SKELLY_PRICE_CHANNEL})`)
       .addFields(...welcomeFields)
       .setTimestamp();
 
@@ -4072,28 +4192,33 @@ function ticketPanelComponents() {
 
 const SKELLY_PRICE_CHANNEL = "https://discord.com/channels/1450662191890956322/1518633695404101773";
 
-const SKELLY_PRICE_TEXT = [
-  "**Buying:**",
-  "Skeleton: 3.3m each",
-  "Creeper: 3.3m each",
-  "Iron Golem: 5.5m each",
-  "",
-  "**Selling:**",
-  "Skeleton: 3.9m each",
-  "Creeper: 8m each",
-  "Iron Golem: 9m each",
-  "",
-  "**Notes:**",
-  "Our prices are possibly negotiable",
-  "5x5 minimum",
-  "16 spawner minimum",
-].join("\n");
+function getSkellyPriceText(): string {
+  const spawners = storage.getSpawners();
+  const entries = Object.entries(spawners);
+  const buying = entries.filter(([, s]) => s.buyPrice !== null);
+  const selling = entries.filter(([, s]) => s.sellPrice !== null);
+  const lines: string[] = [];
+  if (buying.length > 0) {
+    lines.push("**Buying:**");
+    for (const [name, s] of buying) {
+      lines.push(`• ${name} Spawners — ${s.buyPrice} each | Amount: ${s.stock}`);
+    }
+  }
+  if (selling.length > 0) {
+    lines.push("", "**Selling:**");
+    for (const [name, s] of selling) {
+      lines.push(`• ${name} Spawners — ${s.sellPrice} each`);
+    }
+  }
+  lines.push("", "**Notes:**", "Our prices are possibly negotiable", "5x5 minimum", "16 spawner minimum");
+  return lines.join("\n");
+}
 
 function skellyTicketPanelEmbed() {
   return new EmbedBuilder()
     .setColor(SKELLY_CATEGORY.color)
     .setTitle("Spawner Prices")
-    .setDescription(`${SKELLY_PRICE_TEXT}\n\nSee <#1518633695404101773> for more details.\nOpen a ticket below to buy or sell.`)
+    .setDescription(`${getSkellyPriceText()}\n\nSee <#1518633695404101773> for more details.\nOpen a ticket below to buy or sell.`)
     .setTimestamp();
 }
 

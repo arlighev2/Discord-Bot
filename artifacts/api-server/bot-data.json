@@ -3,8 +3,8 @@
   "ticketCounter": 16,
   "xp": {
     "1491457883219693720": {
-      "xp": 183,
-      "lastMessage": 1782767481912
+      "xp": 200,
+      "lastMessage": 1782767770498
     },
     "1384009855043633237": {
       "xp": 71,
@@ -359,6 +359,13 @@
       "messageId": "1520971456669024396",
       "text": "-# Vouches must be in the vouch <member> reason",
       "createdAt": "2026-06-29T01:57:33.671Z"
+    },
+    "1521261870550356040": {
+      "channelId": "1518633712747548743",
+      "guildId": "1450662191890956322",
+      "messageId": "1521261870550356040",
+      "text": "-# Minimum 25 vouches required to post or trade here, with 0 scam vouches. Make a support ticket if you got proof.",
+      "createdAt": "2026-06-29T21:11:33.720Z"
     }
   },
   "warns": {

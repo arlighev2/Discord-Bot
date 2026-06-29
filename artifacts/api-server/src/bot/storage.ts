@@ -59,6 +59,12 @@ export interface ViolationEntry {
   expiresAt: string; // ISO timestamp — when this counter resets
 }
 
+export interface SpawnerData {
+  buyPrice: string | null;
+  sellPrice: string | null;
+  stock: number;
+}
+
 interface BotData {
   tickets: Record<string, TicketEntry>;
   ticketCounter: number;
@@ -74,6 +80,7 @@ interface BotData {
   welcomeChannelId: string;
   xp: Record<string, XpEntry>;
   violations: Record<string, ViolationEntry>;
+  spawners: Record<string, SpawnerData>;
 }
 
 const DATA_FILE = path.resolve(process.cwd(), "bot-data.json");
@@ -99,6 +106,16 @@ function defaultData(): BotData {
     stickers: {},
     warns: {},
     welcomeChannelId: "",
+    spawners: {
+      "Skeleton":   { buyPrice: "3.3m", sellPrice: "3.9m", stock: 209 },
+      "Iron Golem": { buyPrice: "5.5m", sellPrice: "9m",   stock: 0   },
+      "Blaze":      { buyPrice: "2m",   sellPrice: null,    stock: 0   },
+      "Pig":        { buyPrice: "2m",   sellPrice: null,    stock: 0   },
+      "Cow":        { buyPrice: "2m",   sellPrice: null,    stock: 0   },
+      "Spider":     { buyPrice: "4m",   sellPrice: null,    stock: 0   },
+      "Piglin":     { buyPrice: "5m",   sellPrice: null,    stock: 0   },
+      "Creeper":    { buyPrice: "5m",   sellPrice: "8m",    stock: 0   },
+    },
   };
 }
 
@@ -439,5 +456,39 @@ export const storage = {
     if (!_data.violations) return;
     delete _data.violations[userId];
     saveData(_data);
+  },
+
+  getSpawners(): Record<string, SpawnerData> {
+    if (!_data.spawners) _data.spawners = defaultData().spawners;
+    return _data.spawners;
+  },
+
+  updateSpawnerStock(name: string, delta: number): { key: string; data: SpawnerData } | null {
+    if (!_data.spawners) _data.spawners = defaultData().spawners;
+    const key = Object.keys(_data.spawners).find((k) => k.toLowerCase() === name.toLowerCase());
+    if (!key) return null;
+    _data.spawners[key].stock = Math.max(0, (_data.spawners[key].stock ?? 0) + delta);
+    saveData(_data);
+    return { key, data: _data.spawners[key] };
+  },
+
+  setSpawnerPrice(name: string, type: "buy" | "sell", price: string | null): { key: string; data: SpawnerData } | null {
+    if (!_data.spawners) _data.spawners = defaultData().spawners;
+    const key = Object.keys(_data.spawners).find((k) => k.toLowerCase() === name.toLowerCase());
+    if (!key) return null;
+    if (type === "buy") _data.spawners[key].buyPrice = price;
+    else _data.spawners[key].sellPrice = price;
+    saveData(_data);
+    return { key, data: _data.spawners[key] };
+  },
+
+  addSpawnerType(name: string): boolean {
+    if (!_data.spawners) _data.spawners = defaultData().spawners;
+    const exists = Object.keys(_data.spawners).some((k) => k.toLowerCase() === name.toLowerCase());
+    if (exists) return false;
+    const properName = name.charAt(0).toUpperCase() + name.slice(1);
+    _data.spawners[properName] = { buyPrice: null, sellPrice: null, stock: 0 };
+    saveData(_data);
+    return true;
   },
 };
