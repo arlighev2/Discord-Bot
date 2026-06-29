@@ -1,0 +1,352 @@
+{
+  "tickets": {},
+  "ticketCounter": 16,
+  "xp": {
+    "1491457883219693720": {
+      "xp": 116,
+      "lastMessage": 1782750769874
+    },
+    "1384009855043633237": {
+      "xp": 71,
+      "lastMessage": 1782702962845
+    },
+    "1016893982237802567": {
+      "xp": 11,
+      "lastMessage": 1782714480145
+    },
+    "906401073328189501": {
+      "xp": 13,
+      "lastMessage": 1782714491906
+    },
+    "1043593262524551178": {
+      "xp": 3,
+      "lastMessage": 1782749152700
+    }
+  },
+  "violations": {
+    "1384009855043633237": {
+      "count": 1,
+      "expiresAt": "2026-07-06T02:58:20.472Z"
+    }
+  },
+  "farmDescription": "Buy Farms – For users interested in purchasing a farm. Use this ticket for farm availability, pricing, purchase inquiries, or any questions related to buying a farm.",
+  "farmList": "Available farms:\n\n66m/Hour Basalt Farm: 1.5B\n128m/Hour Basalt Farm 2.4B\n\n** CURRENTLY LOOKING FOR BUILDERS, MAKE A SUPPORT TICKET TO APPLY **\n\n\n\nMining Services: 1k Per Block",
+  "skellyDescription": ":skelly:  Buy/Sell Skellys – For purchase questions, payment issues, donation inquiries, reward claims, or buying/selling Skelly Spawners.",
+  "categoryMessages": {},
+  "ticketPanelTitle": "Support Tickets",
+  "ticketPanelDesc": "Need help or have a question? Click one of the buttons below to open a ticket. Our staff will assist you as soon as possible.",
+  "giveaways": {
+    "fkziy440pt": {
+      "id": "fkziy440pt",
+      "guildId": "1450662191890956322",
+      "channelId": "1450662193266692290",
+      "messageId": "1520299179170201621",
+      "hostId": "1491457883219693720",
+      "prize": "20m",
+      "description": "",
+      "winnersCount": 1,
+      "endTime": "2026-06-27T05:26:39.961Z",
+      "entries": [
+        "1384009855043633237"
+      ],
+      "ended": true,
+      "winners": [
+        "1384009855043633237"
+      ],
+      "claimedBy": [
+        "1384009855043633237"
+      ],
+      "claimExpiry": "2026-06-27T17:26:40.652Z",
+      "winMessages": {
+        "1384009855043633237": "1520299307683676203"
+      },
+      "type": "normal"
+    },
+    "fxite0l718": {
+      "id": "fxite0l718",
+      "guildId": "1450662191890956322",
+      "channelId": "1450662193501569140",
+      "messageId": "1520299806281433089",
+      "hostId": "1384009855043633237",
+      "prize": "1m",
+      "description": "",
+      "winnersCount": 1,
+      "endTime": "2026-06-27T05:28:40.420Z",
+      "entries": [],
+      "ended": true,
+      "winners": [],
+      "claimedBy": [],
+      "claimExpiry": null,
+      "winMessages": {},
+      "type": "double"
+    },
+    "xp4vgcssdw": {
+      "id": "xp4vgcssdw",
+      "guildId": "1450662191890956322",
+      "channelId": "1450662193266692290",
+      "messageId": "1520301022457630741",
+      "hostId": "1491457883219693720",
+      "prize": "20m",
+      "description": "",
+      "winnersCount": 1,
+      "endTime": "2026-06-27T05:33:39.405Z",
+      "entries": [
+        "1384009855043633237"
+      ],
+      "ended": true,
+      "winners": [
+        "1384009855043633237"
+      ],
+      "claimedBy": [
+        "1384009855043633237"
+      ],
+      "claimExpiry": "2026-06-27T17:33:42.208Z",
+      "winMessages": {
+        "1384009855043633237": "1520301076509626459"
+      },
+      "type": "double"
+    },
+    "6g7c5qcfkf": {
+      "id": "6g7c5qcfkf",
+      "guildId": "1450662191890956322",
+      "channelId": "1450662193501569140",
+      "messageId": "1520303607273099405",
+      "hostId": "1491457883219693720",
+      "prize": "1m",
+      "description": "",
+      "winnersCount": 1,
+      "endTime": "2026-06-27T05:44:00.691Z",
+      "entries": [
+        "1491457883219693720"
+      ],
+      "ended": true,
+      "winners": [
+        "1491457883219693720"
+      ],
+      "claimedBy": [
+        "1491457883219693720"
+      ],
+      "claimExpiry": "2026-06-27T17:44:00.912Z",
+      "winMessages": {
+        "1491457883219693720": "1520303671357870192"
+      },
+      "type": "double"
+    },
+    "m1if99bsmr": {
+      "id": "m1if99bsmr",
+      "guildId": "1450662191890956322",
+      "channelId": "1450662193266692290",
+      "messageId": "1520305028345364661",
+      "hostId": "1491457883219693720",
+      "prize": "20m",
+      "description": "",
+      "winnersCount": 1,
+      "endTime": "2026-06-27T05:49:34.519Z",
+      "entries": [],
+      "ended": true,
+      "winners": [],
+      "claimedBy": [],
+      "claimExpiry": null,
+      "winMessages": {},
+      "type": "double"
+    },
+    "9nnnyb7xy0": {
+      "id": "9nnnyb7xy0",
+      "guildId": "1450662191890956322",
+      "channelId": "1450662193266692290",
+      "messageId": "1520305110805250089",
+      "hostId": "1491457883219693720",
+      "prize": "20m",
+      "description": "",
+      "winnersCount": 1,
+      "endTime": "2026-06-27T05:49:59.187Z",
+      "entries": [
+        "1384009855043633237"
+      ],
+      "ended": true,
+      "winners": [
+        "1384009855043633237"
+      ],
+      "claimedBy": [
+        "1384009855043633237"
+      ],
+      "claimExpiry": "2026-06-27T17:49:59.547Z",
+      "winMessages": {
+        "1384009855043633237": "1520305175502262392"
+      },
+      "type": "double"
+    },
+    "7lp3jonyxf": {
+      "id": "7lp3jonyxf",
+      "guildId": "1450662191890956322",
+      "channelId": "1450662193266692290",
+      "messageId": "1520313449807347782",
+      "hostId": "1491457883219693720",
+      "prize": "20m",
+      "description": "",
+      "winnersCount": 1,
+      "endTime": "2026-06-27T06:23:22.352Z",
+      "entries": [
+        "1491457883219693720"
+      ],
+      "ended": true,
+      "winners": [
+        "1491457883219693720"
+      ],
+      "claimedBy": [
+        "1491457883219693720"
+      ],
+      "claimExpiry": "2026-06-27T18:23:22.560Z",
+      "winMessages": {
+        "1491457883219693720": "1520313576424734791"
+      },
+      "type": "double"
+    },
+    "yvajdj496q": {
+      "id": "yvajdj496q",
+      "guildId": "1450662191890956322",
+      "channelId": "1450662193266692290",
+      "messageId": "1520314221886439455",
+      "hostId": "1491457883219693720",
+      "prize": "20m",
+      "description": "",
+      "winnersCount": 1,
+      "endTime": "2026-06-27T06:26:26.416Z",
+      "entries": [
+        "1491457883219693720"
+      ],
+      "ended": true,
+      "winners": [
+        "1491457883219693720"
+      ],
+      "claimedBy": [],
+      "claimExpiry": null,
+      "winMessages": {},
+      "type": "simple"
+    },
+    "n0u87751xo": {
+      "id": "n0u87751xo",
+      "guildId": "1450662191890956322",
+      "channelId": "1450662193266692290",
+      "messageId": "1520315768879841293",
+      "hostId": "1491457883219693720",
+      "prize": "1m",
+      "description": "",
+      "winnersCount": 1,
+      "endTime": "2026-06-27T06:32:10.269Z",
+      "entries": [],
+      "ended": true,
+      "winners": [],
+      "claimedBy": [],
+      "claimExpiry": null,
+      "winMessages": {},
+      "type": "normal"
+    },
+    "z0cn4ron2z": {
+      "id": "z0cn4ron2z",
+      "guildId": "1450662191890956322",
+      "channelId": "1450662193266692290",
+      "messageId": "1520315957422325831",
+      "hostId": "1491457883219693720",
+      "prize": "1m",
+      "description": "",
+      "winnersCount": 1,
+      "endTime": "2026-06-27T06:32:55.166Z",
+      "entries": [],
+      "ended": true,
+      "winners": [],
+      "claimedBy": [],
+      "claimExpiry": null,
+      "winMessages": {},
+      "type": "normal"
+    },
+    "o33pvl6c6d": {
+      "id": "o33pvl6c6d",
+      "guildId": "1450662191890956322",
+      "channelId": "1518681373806694544",
+      "messageId": "1520406411203444749",
+      "hostId": "1491457883219693720",
+      "prize": "20m",
+      "description": "",
+      "winnersCount": 1,
+      "endTime": "2026-06-27T12:32:46.152Z",
+      "entries": [
+        "1491457883219693720"
+      ],
+      "ended": true,
+      "winners": [
+        "1491457883219693720"
+      ],
+      "claimedBy": [
+        "1491457883219693720"
+      ],
+      "claimExpiry": "2026-06-28T00:32:46.350Z",
+      "winMessages": {
+        "1491457883219693720": "1520406538307506337"
+      },
+      "type": "normal"
+    },
+    "dnexchqf6l": {
+      "id": "dnexchqf6l",
+      "guildId": "1450662191890956322",
+      "channelId": "1518681373806694544",
+      "messageId": "1520407065519067157",
+      "hostId": "1491457883219693720",
+      "prize": "20m",
+      "description": "",
+      "winnersCount": 1,
+      "endTime": "2026-06-27T12:35:02.062Z",
+      "entries": [
+        "1491457883219693720",
+        "1384009855043633237"
+      ],
+      "ended": true,
+      "winners": [
+        "1384009855043633237"
+      ],
+      "claimedBy": [
+        "1384009855043633237"
+      ],
+      "claimExpiry": "2026-06-28T00:35:02.247Z",
+      "winMessages": {
+        "1384009855043633237": "1520407108624060456"
+      },
+      "type": "normal"
+    }
+  },
+  "stickers": {
+    "1520877115095121960": {
+      "channelId": "1518633712747548743",
+      "guildId": "1450662191890956322",
+      "messageId": "1520877115095121960",
+      "text": "-# Minimum 25 vouches required to post or trade here, with 0 scam vouches. Make a support ticket if you got proof.",
+      "createdAt": "2026-06-28T19:42:07.640Z"
+    },
+    "1520971456669024396": {
+      "channelId": "1503988954490470461",
+      "guildId": "1450662191890956322",
+      "messageId": "1520971456669024396",
+      "text": "-# Vouches must be in the vouch <member> reason",
+      "createdAt": "2026-06-29T01:57:33.671Z"
+    }
+  },
+  "warns": {
+    "1384009855043633237": [
+      {
+        "userId": "1384009855043633237",
+        "reason": "test",
+        "moderatorId": "1491457883219693720",
+        "moderatorTag": "v3lgh",
+        "timestamp": "2026-06-29T02:57:11.091Z"
+      },
+      {
+        "userId": "1384009855043633237",
+        "reason": "test",
+        "moderatorId": "1491457883219693720",
+        "moderatorTag": "v3lgh",
+        "timestamp": "2026-06-29T03:32:18.958Z"
+      }
+    ]
+  },
+  "welcomeChannelId": ""
+}
