@@ -31,7 +31,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd artifacts/api-server && pnpm run dev"
+args = "cd artifacts/api-server && BOT_ENABLED=1 pnpm run dev"
 waitForPort = 5000
 
 [agent]

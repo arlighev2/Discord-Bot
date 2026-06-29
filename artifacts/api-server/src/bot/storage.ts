@@ -128,10 +128,17 @@ function loadData(): BotData {
 function saveData(data: BotData): void {
   const json = JSON.stringify(data, null, 2);
   const tmp = DATA_FILE + ".tmp";
-  fs.writeFileSync(tmp, json, "utf8");
-  fs.renameSync(tmp, DATA_FILE);
-  // Keep a backup copy one write behind for safety
-  try { fs.copyFileSync(DATA_FILE, DATA_FILE + ".bak"); } catch {}
+  try {
+    fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
+    fs.writeFileSync(tmp, json, "utf8");
+    fs.renameSync(tmp, DATA_FILE);
+    // Keep a backup copy one write behind for safety
+    try { fs.copyFileSync(DATA_FILE, DATA_FILE + ".bak"); } catch {}
+  } catch (err) {
+    console.error("[storage] Failed to save data:", err);
+    // Fallback: write directly without atomic rename
+    try { fs.writeFileSync(DATA_FILE, json, "utf8"); } catch {}
+  }
 }
 
 let _data = loadData();

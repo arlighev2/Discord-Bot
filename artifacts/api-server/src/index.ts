@@ -23,6 +23,10 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
-  logger.info("Starting Discord bot...");
-  createBotClient();
+  if (process.env["BOT_ENABLED"] === "1") {
+    logger.info("Starting Discord bot...");
+    createBotClient();
+  } else {
+    logger.info("Discord bot disabled (BOT_ENABLED not set). Set BOT_ENABLED=1 to enable.");
+  }
 });

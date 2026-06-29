@@ -688,8 +688,13 @@ export function createBotClient(): Client | null {
   const XP_MIN = 2;
   const XP_MAX = 4;
 
+  const _processedMsgIds = new Set<string>();
+
   client.on("messageCreate", (msg) => {
     if (msg.author.bot) return;
+    if (_processedMsgIds.has(msg.id)) return;
+    _processedMsgIds.add(msg.id);
+    setTimeout(() => _processedMsgIds.delete(msg.id), 30_000);
 
     // ── XP tracking + level-up announcements ──
     if (msg.guild && !msg.author.bot) {
