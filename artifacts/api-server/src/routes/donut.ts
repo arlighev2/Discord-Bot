@@ -4,7 +4,7 @@ const router = Router();
 const API = "https://api.donutsmp.net/v1";
 
 function authHeaders() {
-  return { Authorization: `Bearer ${process.env["DONUTSMP_API_KEY"] ?? ""}` };
+  return { Authorization: `Bearer ${process.env["DONUTSMP_API_TOKEN"] ?? ""}` };
 }
 
 router.get("/stats/:username", async (req, res) => {

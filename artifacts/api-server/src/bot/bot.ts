@@ -68,7 +68,7 @@ import {
 import { storage, type GiveawayEntry, type WarnEntry } from "./storage.js";
 
 const TOKEN = process.env["DISCORD_BOT_TOKEN"];
-const DONUTSMP_API_KEY = process.env["DONUTSMP_API_KEY"];
+const DONUTSMP_API_KEY = process.env["DONUTSMP_API_TOKEN"];
 
 const ONLINE_COLOR = 0x57f287;
 const OFFLINE_COLOR = 0xed4245;
