@@ -706,7 +706,8 @@ export function createBotClient(): Client | null {
   });
 
   // ─── Vouch Channel Format Enforcer ─────────────────────────────────────────
-  const VOUCH_CHANNEL_ID = "1503988954490470461";
+  const VOUCH_CHANNEL_IDS = new Set(["1503988954490470461", "1518620232787165225"]);
+  const VOUCH_CHANNEL_ID = "1503988954490470461"; // kept for DM reference
   const VOUCH_REGEX = /^(scam\s*vouch|vouch)\s+<@!?\d+>(\s+\S.*)?$/i;
 
   // Per-channel sticky repost cooldown
@@ -795,12 +796,12 @@ const _announcedLevels = new Map<string, number>();
         }
 
         // ── Vouch enforcer (runs for everyone, including owners) ──
-        if (msg.channelId === VOUCH_CHANNEL_ID) {
+        if (VOUCH_CHANNEL_IDS.has(msg.channelId)) {
           if (!VOUCH_REGEX.test(msg.content.trim())) {
             msg.delete().catch(() => {});
             msg.author
               .send(
-                `❌ Your message in <#${VOUCH_CHANNEL_ID}> was removed because it didn't follow the correct format.\n\n` +
+                `❌ Your message in <#${msg.channelId}> was removed because it didn't follow the correct format.\n\n` +
                 `**Correct formats:**\n` +
                 `\`vouch @member\`\n` +
                 `\`vouch @member reason\`\n` +
