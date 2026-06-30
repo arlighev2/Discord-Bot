@@ -794,7 +794,27 @@ const _announcedLevels = new Map<string, number>();
           }
         }
 
-        // Owner bypasses all automod
+        // ── Vouch enforcer (runs for everyone, including owners) ──
+        if (msg.channelId === VOUCH_CHANNEL_ID) {
+          if (!VOUCH_REGEX.test(msg.content.trim())) {
+            msg.delete().catch(() => {});
+            msg.author
+              .send(
+                `❌ Your message in <#${VOUCH_CHANNEL_ID}> was removed because it didn't follow the correct format.\n\n` +
+                `**Correct formats:**\n` +
+                `\`vouch @member\`\n` +
+                `\`vouch @member reason\`\n` +
+                `\`scam vouch @member\`\n` +
+                `\`scam vouch @member reason\`\n` +
+                `\`scamvouch @member\`\n` +
+                `\`scamvouch @member reason\``,
+              )
+              .catch(() => {});
+          }
+          return;
+        }
+
+        // Owner bypasses all other automod
         if (isOwner(msg.author.id)) return;
 
         // ── Cross-channel duplicate detection ──
@@ -934,25 +954,6 @@ const _announcedLevels = new Map<string, number>();
 
       })();
       return;
-    }
-
-    // ── Vouch enforcer ──
-    if (msg.channelId === VOUCH_CHANNEL_ID) {
-      if (!VOUCH_REGEX.test(msg.content.trim())) {
-        msg.delete().catch(() => {});
-        msg.author
-          .send(
-            `❌ Your message in <#${VOUCH_CHANNEL_ID}> was removed because it didn't follow the correct format.\n\n` +
-            `**Correct formats:**\n` +
-            `\`vouch @member\`\n` +
-            `\`vouch @member reason\`\n` +
-            `\`scam vouch @member\`\n` +
-            `\`scam vouch @member reason\`\n` +
-            `\`scamvouch @member\`\n` +
-            `\`scamvouch @member reason\``,
-          )
-          .catch(() => {});
-      }
     }
 
     // ── Sticky repost ──
