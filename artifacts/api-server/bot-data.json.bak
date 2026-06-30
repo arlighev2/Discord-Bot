@@ -1,7 +1,12 @@
 {
   "tickets": {},
   "ticketCounter": 17,
-  "xp": {},
+  "xp": {
+    "1491457883219693720": {
+      "xp": 8,
+      "lastMessage": 1782835095963
+    }
+  },
   "violations": {
     "1384009855043633237": {
       "count": 1,
@@ -334,13 +339,6 @@
     }
   },
   "stickers": {
-    "1520877115095121960": {
-      "channelId": "1518633712747548743",
-      "guildId": "1450662191890956322",
-      "messageId": "1520877115095121960",
-      "text": "-# Minimum 25 vouches required to post or trade here, with 0 scam vouches. Make a support ticket if you got proof.",
-      "createdAt": "2026-06-28T19:42:07.640Z"
-    },
     "1520971456669024396": {
       "channelId": "1503988954490470461",
       "guildId": "1450662191890956322",
@@ -348,10 +346,17 @@
       "text": "-# Vouches must be in the vouch <member> reason",
       "createdAt": "2026-06-29T01:57:33.671Z"
     },
-    "1521261870550356040": {
+    "1521545416510935135": {
       "channelId": "1518633712747548743",
       "guildId": "1450662191890956322",
-      "messageId": "1521261870550356040",
+      "messageId": "1521545416510935135",
+      "text": "-# Minimum 25 vouches required to post or trade here, with 0 scam vouches. Make a support ticket if you got proof.",
+      "createdAt": "2026-06-28T19:42:07.640Z"
+    },
+    "1521545421254692995": {
+      "channelId": "1518633712747548743",
+      "guildId": "1450662191890956322",
+      "messageId": "1521545421254692995",
       "text": "-# Minimum 25 vouches required to post or trade here, with 0 scam vouches. Make a support ticket if you got proof.",
       "createdAt": "2026-06-29T21:11:33.720Z"
     }

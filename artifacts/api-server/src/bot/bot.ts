@@ -964,9 +964,15 @@ const _announcedLevels = new Map<string, number>();
       try {
         const ch = msg.channel as TextChannel;
         for (const sticker of channelStickers) {
-          await ch.messages.fetch(sticker.messageId).then((m) => m.delete()).catch(() => {});
-          const newMsg = await ch.send({ content: sticker.text });
-          storage.replaceStickerMessage(sticker.messageId, newMsg.id);
+          // Capture the IDs before any await so they don't change under us
+          const oldMsgId = sticker.messageId;
+          const stickerText = sticker.text;
+          const stickerChannelId = sticker.channelId;
+          await ch.messages.fetch(oldMsgId).then((m) => m.delete()).catch(() => {});
+          const newMsg = await ch.send({ content: stickerText });
+          // repostStickerMessage falls back to channelId+text lookup if the key
+          // is stale (e.g. bot restarted mid-repost), so the new ID is always saved.
+          storage.repostStickerMessage(stickerChannelId, stickerText, oldMsgId, newMsg.id);
         }
       } finally {
         stickyBusy.delete(msg.channelId);

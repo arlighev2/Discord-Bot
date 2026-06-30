@@ -362,6 +362,31 @@ export const storage = {
     return true;
   },
 
+  // Like replaceStickerMessage but falls back to channelId+text lookup when the
+  // old message-ID key is stale (e.g. bot restarted mid-repost). Guarantees the
+  // new ID is always persisted so duplicates can't accumulate.
+  repostStickerMessage(channelId: string, text: string, oldMessageId: string, newMessageId: string): void {
+    if (!_data.stickers) _data.stickers = {};
+    // Primary: find by the key we expect
+    let entry = Object.entries(_data.stickers).find(([k]) => k === oldMessageId);
+    // Fallback: the key is stale — find by channel + text
+    if (!entry) {
+      entry = Object.entries(_data.stickers).find(
+        ([, s]) => s.channelId === channelId && s.text === text,
+      );
+    }
+    if (entry) {
+      const [oldKey, s] = entry;
+      delete _data.stickers[oldKey];
+      s.messageId = newMessageId;
+      _data.stickers[newMessageId] = s;
+    } else {
+      // Nothing found at all — create a fresh entry so we don't lose track
+      _data.stickers[newMessageId] = { channelId, guildId: "", messageId: newMessageId, text, createdAt: new Date().toISOString() };
+    }
+    saveData(_data);
+  },
+
   updateStickerText(messageId: string, text: string): boolean {
     const s = _data.stickers?.[messageId];
     if (!s) return false;
