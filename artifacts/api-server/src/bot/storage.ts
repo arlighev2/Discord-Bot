@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 
 export interface TicketEntry {
   userId: string;
@@ -86,8 +87,10 @@ interface BotData {
   appBlacklist: Record<string, { reason: string; by: string; at: string }>;
 }
 
-const DATA_FILE = path.resolve(process.cwd(), "bot-data.json");
-const TRANSCRIPT_DIR = path.resolve(process.cwd(), "bot-transcripts");
+const _dir = path.dirname(fileURLToPath(import.meta.url));
+const _root = path.resolve(_dir, "..");
+const DATA_FILE = path.resolve(_root, "bot-data.json");
+const TRANSCRIPT_DIR = path.resolve(_root, "bot-transcripts");
 if (!fs.existsSync(TRANSCRIPT_DIR)) fs.mkdirSync(TRANSCRIPT_DIR, { recursive: true });
 
 function defaultData(): BotData {
