@@ -438,6 +438,11 @@ export const storage = {
     return _data.xp ?? {};
   },
 
+  resetAllXP(): void {
+    _data.xp = {};
+    saveData(_data);
+  },
+
   // ── Violations (progressive punishment, permanent — violations never expire) ──
   getViolationCount(userId: string): number {
     if (!_data.violations) _data.violations = {};

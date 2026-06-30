@@ -592,15 +592,81 @@ export function createBotClient(): Client | null {
         logger.warn({ err: e, guild: guild.name }, "AutoMod failed"),
       );
     }
-    // Restore timers for active giveaways
+    // Restore timers for active giveaways (and immediately end any that expired while offline)
     for (const gw of storage.getActiveGiveaways()) {
       scheduleGiveaway(gw);
     }
-    // Restore claim expiry timers for ended giveaways with active claims
+
+    // For ended giveaways: restore claim expiry timers AND resend any missing claim
+    // buttons for winners who never received their message (bot was down when giveaway ended).
     const allGiveaways = Object.values(storage.getData().giveaways ?? {});
     for (const gw of allGiveaways) {
-      if (gw.ended && gw.claimExpiry && !activeClaimTimers.has(gw.id)) {
+      if (!gw.ended) continue;
+
+      // Restore claim expiry timers
+      if (gw.claimExpiry && !activeClaimTimers.has(gw.id)) {
         scheduleClaimExpiry(gw);
+      }
+
+      // Resend claim buttons to winners who never got a win message
+      // (happens when bot crashed between storage.endGiveaway and the message sends)
+      const missingWinners = gw.winners.filter(
+        (wId) => !gw.claimedBy.includes(wId) && !gw.winMessages?.[wId],
+      );
+      if (missingWinners.length === 0) continue;
+      // Skip if claim window has already expired
+      if (gw.claimExpiry && new Date() > new Date(gw.claimExpiry)) continue;
+
+      const gwType = gw.type ?? "normal";
+      if (gwType === "simple") continue; // simple giveaways don't use claim buttons
+
+      const resendGuild = client.guilds.cache.get(gw.guildId);
+      if (!resendGuild) continue;
+      const resendCh = resendGuild.channels.cache.get(gw.channelId) as TextChannel | undefined;
+      if (!resendCh) continue;
+
+      // Ensure a claim expiry exists
+      if (!gw.claimExpiry) {
+        const expiry = new Date(Date.now() + CLAIM_HOURS * 60 * 60 * 1000);
+        storage.setClaimExpiry(gw.id, expiry.toISOString());
+      }
+
+      for (const winnerId of missingWinners) {
+        try {
+          const components =
+            gwType === "double"
+              ? [
+                  new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    new ButtonBuilder()
+                      .setCustomId(`giveaway_claim_${gw.id}_${winnerId}`)
+                      .setLabel("Claim")
+                      .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                      .setCustomId(`giveaway_double_${gw.id}_${winnerId}`)
+                      .setLabel("Double It")
+                      .setStyle(ButtonStyle.Danger),
+                  ),
+                ]
+              : [
+                  new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    new ButtonBuilder()
+                      .setCustomId(`giveaway_claim_${gw.id}_${winnerId}`)
+                      .setLabel("Claim")
+                      .setStyle(ButtonStyle.Primary),
+                  ),
+                ];
+          const winMsg = await resendCh.send({
+            content: `Congratulations <@${winnerId}>, you won **${gw.prize}**! (Claim button re-sent — bot was offline when the giveaway ended.)`,
+            components,
+          });
+          storage.addWinMessage(gw.id, winnerId, winMsg.id);
+        } catch {}
+      }
+
+      // Refresh claim expiry timer now that winMessages are set
+      const refreshed = storage.getGiveaway(gw.id);
+      if (refreshed?.claimExpiry && !activeClaimTimers.has(gw.id)) {
+        scheduleClaimExpiry(refreshed);
       }
     }
   });
@@ -693,6 +759,8 @@ export function createBotClient(): Client | null {
   const XP_MAX = 4;
 
   const _processedMsgIds = new Set<string>();
+// Track the highest level announced per user this session to prevent duplicate announcements
+const _announcedLevels = new Map<string, number>();
 
   client.on("messageCreate", (msg) => {
     if (msg.author.bot) return;
@@ -706,12 +774,19 @@ export function createBotClient(): Client | null {
         const now = Date.now();
         const entry = storage.getXP(msg.author.id);
         if (now - entry.lastMessage >= XP_COOLDOWN_MS) {
+          // Immediately claim the cooldown slot synchronously — prevents concurrent
+          // messages from the same user both passing the cooldown window.
+          storage.setXpCooldown(msg.author.id);
           const gained = Math.floor(Math.random() * (XP_MAX - XP_MIN + 1)) + XP_MIN;
           const oldLevel = computeLevel(entry.xp).level;
           storage.addXP(msg.author.id, gained);
           const newEntry = storage.getXP(msg.author.id);
           const newLevel = computeLevel(newEntry.xp).level;
-          if (newLevel > oldLevel && newLevel >= 1 && newLevel <= 100) {
+          // Only announce each level once per session — prevents duplicates if two
+          // messages somehow race through (e.g. Discord delivers a burst on reconnect).
+          const lastAnnounced = _announcedLevels.get(msg.author.id) ?? -1;
+          if (newLevel > oldLevel && newLevel > lastAnnounced && newLevel >= 1 && newLevel <= 100) {
+            _announcedLevels.set(msg.author.id, newLevel);
             const lvlCh = msg.guild.channels.cache.get(LEVELUP_CHANNEL_ID) as TextChannel | null;
             if (lvlCh) {
               await lvlCh.send({ content: `<@${msg.author.id}> has reached level **${newLevel}**. GG!` }).catch(() => {});
@@ -1097,6 +1172,9 @@ async function registerCommands(client: Client) {
       .addSubcommand((sub) =>
         sub.setName("refreshpanel").setDescription("Force-refresh the live spawner price panel embed"),
       ),
+    new SlashCommandBuilder()
+      .setName("resetlevels")
+      .setDescription("Reset ALL player XP and levels to zero (owner only)"),
   ].map((c) => c.toJSON());
 
   try {
@@ -1263,6 +1341,24 @@ async function closeTicket(
 
 async function handleCommand(i: ChatInputCommandInteraction) {
   const { commandName, user, channel, guild } = i;
+
+  if (commandName === "resetlevels") {
+    if (!isOwner(user.id)) {
+      await i.reply({ embeds: [errEmbed("Only the server owner can use this command.")], flags: 64 });
+      return;
+    }
+    storage.resetAllXP();
+    _announcedLevels.clear();
+    await i.reply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(SUCCESS_COLOR)
+          .setTitle("✅ Levels Reset")
+          .setDescription("All player XP and levels have been wiped. Everyone starts fresh from Level 0."),
+      ],
+    });
+    return;
+  }
 
   if (commandName === "stats") {
     const username = i.options.getString("username", true).trim();
