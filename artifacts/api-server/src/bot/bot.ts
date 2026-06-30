@@ -433,16 +433,20 @@ async function endGiveaway(gw: GiveawayEntry) {
   const client = _client;
   if (!client) return;
 
-  const guild = client.guilds.cache.get(gw.guildId);
+  const fresh = storage.getGiveaway(gw.id);
+  if (!fresh || fresh.ended) return;
+
+  const guild = client.guilds.cache.get(fresh.guildId);
   if (!guild) return;
 
-  const ch = guild.channels.cache.get(gw.channelId) as TextChannel | undefined;
+  const ch = guild.channels.cache.get(fresh.channelId) as TextChannel | undefined;
   if (!ch) return;
 
-  const shuffled = [...gw.entries].sort(() => Math.random() - 0.5);
-  const winners = shuffled.slice(0, Math.min(gw.winnersCount, shuffled.length));
+  const shuffled = [...fresh.entries].sort(() => Math.random() - 0.5);
+  const winners = shuffled.slice(0, Math.min(fresh.winnersCount, shuffled.length));
 
-  storage.endGiveaway(gw.id, winners);
+  storage.endGiveaway(fresh.id, winners);
+  gw = fresh;
   const updatedGw = storage.getGiveaway(gw.id);
   if (!updatedGw) return;
 
@@ -2283,6 +2287,8 @@ async function handleButton(i: ButtonInteraction) {
           await msg.edit({ embeds: [buildGiveawayEmbed(updated)], components: msg.components as never });
         } catch {}
         await i.reply({ embeds: [infoEmbed("You have left the giveaway.")], flags: 64 });
+      } else {
+        await i.reply({ embeds: [infoEmbed("You were not in this giveaway.")], flags: 64 });
       }
     } else {
       const entered = storage.enterGiveaway(gwId, user.id);
@@ -2293,6 +2299,8 @@ async function handleButton(i: ButtonInteraction) {
           await msg.edit({ embeds: [buildGiveawayEmbed(updated)], components: msg.components as never });
         } catch {}
         await i.reply({ embeds: [okEmbed("You have entered the giveaway! Click again to leave.")], flags: 64 });
+      } else {
+        await i.reply({ embeds: [errEmbed("Could not enter the giveaway. It may have just ended — please try again.")], flags: 64 });
       }
     }
     return;
