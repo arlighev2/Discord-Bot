@@ -1013,34 +1013,25 @@ async function registerCommands(client: Client) {
       .addUserOption((o) => o.setName("user").setDescription("User").setRequired(true)),
     new SlashCommandBuilder().setName("tickets").setDescription("List active tickets (staff)"),
     new SlashCommandBuilder()
-      .setName("giveaway")
-      .setDescription("Giveaway commands")
-      .addSubcommand((sub) =>
-        sub.setName("create").setDescription("Create a new giveaway in this channel"),
-      )
-      .addSubcommand((sub) =>
-        sub
-          .setName("reroll")
-          .setDescription("Pick a new random winner for an ended giveaway")
-          .addStringOption((opt) =>
-            opt.setName("id").setDescription("Giveaway ID").setRequired(true),
-          ),
-      )
-      .addSubcommand((sub) =>
-        sub
-          .setName("end")
-          .setDescription("Force-end a running giveaway early")
-          .addStringOption((opt) =>
-            opt.setName("id").setDescription("Giveaway ID").setRequired(true),
-          ),
-      )
-      .addSubcommand((sub) =>
-        sub
-          .setName("info")
-          .setDescription("Look up full details of a giveaway by ID")
-          .addStringOption((opt) =>
-            opt.setName("id").setDescription("Giveaway ID").setRequired(true),
-          ),
+      .setName("gcreate")
+      .setDescription("Create a new giveaway in this channel"),
+    new SlashCommandBuilder()
+      .setName("greroll")
+      .setDescription("Pick a new random winner for an ended giveaway")
+      .addStringOption((opt) =>
+        opt.setName("id").setDescription("Giveaway ID").setRequired(true),
+      ),
+    new SlashCommandBuilder()
+      .setName("gend")
+      .setDescription("Force-end a running giveaway early")
+      .addStringOption((opt) =>
+        opt.setName("id").setDescription("Giveaway ID").setRequired(true),
+      ),
+    new SlashCommandBuilder()
+      .setName("ginfo")
+      .setDescription("Look up full details of a giveaway by ID")
+      .addStringOption((opt) =>
+        opt.setName("id").setDescription("Giveaway ID").setRequired(true),
       ),
     new SlashCommandBuilder()
       .setName("sticker")
@@ -1681,159 +1672,155 @@ async function handleCommand(i: ChatInputCommandInteraction) {
     return;
   }
 
-  if (commandName === "giveaway") {
-    const sub = i.options.getSubcommand();
-    if (sub === "create") {
-      const member = i.member as GuildMember;
-      if (!canManageGiveaway(member)) {
-        await i.reply({ embeds: [errEmbed("You need the Giveaway Manager role to create giveaways.")], flags: 64 });
-        return;
-      }
-      const modal = new ModalBuilder().setCustomId("mod_giveaway_create").setTitle("Create Giveaway");
-      modal.addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(
-          new TextInputBuilder()
-            .setCustomId("prize")
-            .setLabel("Prize")
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder("e.g. 20m")
-            .setRequired(true),
-        ),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(
-          new TextInputBuilder()
-            .setCustomId("duration")
-            .setLabel("Duration")
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder("e.g. 30s, 5m, 1h, 1d, 2h30m")
-            .setRequired(true),
-        ),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(
-          new TextInputBuilder()
-            .setCustomId("winners")
-            .setLabel("Number of Winners")
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder("e.g. 1")
-            .setRequired(true),
-        ),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(
-          new TextInputBuilder()
-            .setCustomId("type")
-            .setLabel("Type")
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder("normal  |  simple (no claim)  |  double (gamble)")
-            .setRequired(false),
-        ),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(
-          new TextInputBuilder()
-            .setCustomId("description")
-            .setLabel("Description (optional)")
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(false),
-        ),
-      );
-      await i.showModal(modal);
+  if (commandName === "gcreate") {
+    const member = i.member as GuildMember;
+    if (!canManageGiveaway(member)) {
+      await i.reply({ embeds: [errEmbed("You need the Giveaway Manager role to create giveaways.")], flags: 64 });
+      return;
+    }
+    const modal = new ModalBuilder().setCustomId("mod_giveaway_create").setTitle("Create Giveaway");
+    modal.addComponents(
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId("prize")
+          .setLabel("Prize")
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder("e.g. 20m")
+          .setRequired(true),
+      ),
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId("duration")
+          .setLabel("Duration")
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder("e.g. 30s, 5m, 1h, 1d, 2h30m")
+          .setRequired(true),
+      ),
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId("winners")
+          .setLabel("Number of Winners")
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder("e.g. 1")
+          .setRequired(true),
+      ),
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId("type")
+          .setLabel("Type")
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder("normal  |  simple (no claim)  |  double (gamble)")
+          .setRequired(false),
+      ),
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId("description")
+          .setLabel("Description (optional)")
+          .setStyle(TextInputStyle.Paragraph)
+          .setRequired(false),
+      ),
+    );
+    await i.showModal(modal);
+    return;
+  }
+
+  if (commandName === "ginfo") {
+    const member = i.member as GuildMember;
+    if (!canManageGiveaway(member)) {
+      await i.reply({ embeds: [errEmbed("You need the Giveaway Manager role to look up giveaways.")], flags: 64 });
+      return;
+    }
+    const gwId = i.options.getString("id", true).trim();
+    const gw = storage.getGiveaway(gwId);
+    if (!gw) {
+      await i.reply({ embeds: [errEmbed(`No giveaway found with ID \`${gwId}\`.`)], flags: 64 });
       return;
     }
 
-    if (sub === "info") {
-      const member = i.member as GuildMember;
-      if (!canManageGiveaway(member)) {
-        await i.reply({ embeds: [errEmbed("You need the Giveaway Manager role to look up giveaways.")], flags: 64 });
-        return;
-      }
-      const gwId = i.options.getString("id", true).trim();
-      const gw = storage.getGiveaway(gwId);
-      if (!gw) {
-        await i.reply({ embeds: [errEmbed(`No giveaway found with ID \`${gwId}\`.`)], flags: 64 });
-        return;
-      }
+    const endTs = Math.floor(new Date(gw.endTime).getTime() / 1000);
+    const status = gw.ended ? "Ended" : "Active";
+    const statusColor = gw.ended ? 0x747f8d : 0xf47bff;
+    const typeLabel = gw.type === "simple" ? "Simple (no claim)" : gw.type === "double" ? "Double (gamble)" : "Normal";
+    const winnersStr = gw.winners.length > 0 ? gw.winners.map((id) => `<@${id}>`).join(", ") : "None yet";
+    const claimedStr = gw.claimedBy.length > 0 ? gw.claimedBy.map((id) => `<@${id}>`).join(", ") : "None";
+    const entriesStr = gw.entries.length > 0
+      ? gw.entries.slice(0, 30).map((id) => `<@${id}>`).join(", ") + (gw.entries.length > 30 ? ` + ${gw.entries.length - 30} more` : "")
+      : "No entries";
 
-      const endTs = Math.floor(new Date(gw.endTime).getTime() / 1000);
-      const status = gw.ended ? "Ended" : "Active";
-      const statusColor = gw.ended ? 0x747f8d : 0xf47bff;
-      const typeLabel = gw.type === "simple" ? "Simple (no claim)" : gw.type === "double" ? "Double (gamble)" : "Normal";
-      const winnersStr = gw.winners.length > 0 ? gw.winners.map((id) => `<@${id}>`).join(", ") : "None yet";
-      const claimedStr = gw.claimedBy.length > 0 ? gw.claimedBy.map((id) => `<@${id}>`).join(", ") : "None";
-      const entriesStr = gw.entries.length > 0
-        ? gw.entries.slice(0, 30).map((id) => `<@${id}>`).join(", ") + (gw.entries.length > 30 ? ` + ${gw.entries.length - 30} more` : "")
-        : "No entries";
+    const embed = new EmbedBuilder()
+      .setColor(statusColor)
+      .setTitle(`${gw.prize}`)
+      .addFields(
+        { name: "Status",    value: status,                              inline: true },
+        { name: "Type",      value: typeLabel,                           inline: true },
+        { name: "Winners",   value: `${gw.winnersCount}`,               inline: true },
+        { name: "Hosted by", value: `<@${gw.hostId}>`,                  inline: true },
+        { name: "Ends",      value: `<t:${endTs}:f> (<t:${endTs}:R>)`, inline: true },
+        { name: "Channel",   value: `<#${gw.channelId}>`,               inline: true },
+        { name: `Entries (${gw.entries.length})`, value: entriesStr },
+        { name: `Winners (${gw.winners.length})`, value: winnersStr,    inline: true },
+        { name: `Claimed (${gw.claimedBy.length})`, value: claimedStr,  inline: true },
+        ...(gw.description ? [{ name: "Description", value: gw.description }] : []),
+      )
+      .setFooter({ text: `Giveaway ID: ${gw.id}` })
+      .setTimestamp();
 
-      const embed = new EmbedBuilder()
-        .setColor(statusColor)
-        .setTitle(`${gw.prize}`)
-        .addFields(
-          { name: "Status",    value: status,                              inline: true },
-          { name: "Type",      value: typeLabel,                           inline: true },
-          { name: "Winners",   value: `${gw.winnersCount}`,               inline: true },
-          { name: "Hosted by", value: `<@${gw.hostId}>`,                  inline: true },
-          { name: "Ends",      value: `<t:${endTs}:f> (<t:${endTs}:R>)`, inline: true },
-          { name: "Channel",   value: `<#${gw.channelId}>`,               inline: true },
-          { name: `Entries (${gw.entries.length})`, value: entriesStr },
-          { name: `Winners (${gw.winners.length})`, value: winnersStr,    inline: true },
-          { name: `Claimed (${gw.claimedBy.length})`, value: claimedStr,  inline: true },
-          ...(gw.description ? [{ name: "Description", value: gw.description }] : []),
-        )
-        .setFooter({ text: `Giveaway ID: ${gw.id}` })
-        .setTimestamp();
+    await i.reply({ embeds: [embed], flags: 64 });
+    return;
+  }
 
-      await i.reply({ embeds: [embed], flags: 64 });
+  if (commandName === "greroll") {
+    const member = i.member as GuildMember;
+    if (!canManageGiveaway(member)) {
+      await i.reply({ embeds: [errEmbed("You need the Giveaway Manager role to reroll giveaways.")], flags: 64 });
       return;
     }
-
-    if (sub === "reroll") {
-      const member = i.member as GuildMember;
-      if (!canManageGiveaway(member)) {
-        await i.reply({ embeds: [errEmbed("You need the Giveaway Manager role to reroll giveaways.")], flags: 64 });
-        return;
-      }
-      const gwId = i.options.getString("id", true).trim();
-      const gw = storage.getGiveaway(gwId);
-      if (!gw) {
-        await i.reply({ embeds: [errEmbed(`No giveaway found with ID \`${gwId}\`.`)], flags: 64 });
-        return;
-      }
-      if (!gw.ended) {
-        await i.reply({ embeds: [errEmbed("That giveaway is still running.")], flags: 64 });
-        return;
-      }
-      if (gw.entries.length === 0) {
-        await i.reply({ embeds: [errEmbed("No entries to reroll from.")], flags: 64 });
-        return;
-      }
-      await i.deferReply({ flags: 64 });
-      const pool = gw.entries.filter((id) => !gw.claimedBy.includes(id));
-      const eligible = pool.length > 0 ? pool : gw.entries;
-      const newWinner = eligible[Math.floor(Math.random() * eligible.length)];
-      const ch = i.channel as TextChannel;
-      await ch.send({ content: `Reroll: Congratulations <@${newWinner}>, you won **${gw.prize}**!` });
-      await i.editReply({ embeds: [new EmbedBuilder().setColor(BOT_COLOR).setDescription(`New winner: <@${newWinner}>`)] });
+    const gwId = i.options.getString("id", true).trim();
+    const gw = storage.getGiveaway(gwId);
+    if (!gw) {
+      await i.reply({ embeds: [errEmbed(`No giveaway found with ID \`${gwId}\`.`)], flags: 64 });
       return;
     }
-
-    if (sub === "end") {
-      const member = i.member as GuildMember;
-      if (!canManageGiveaway(member)) {
-        await i.reply({ embeds: [errEmbed("You need the Giveaway Manager role to end giveaways.")], flags: 64 });
-        return;
-      }
-      const gwId = i.options.getString("id", true).trim();
-      const gw = storage.getGiveaway(gwId);
-      if (!gw) {
-        await i.reply({ embeds: [errEmbed(`No giveaway found with ID \`${gwId}\`.`)], flags: 64 });
-        return;
-      }
-      if (gw.ended) {
-        await i.reply({ embeds: [errEmbed("That giveaway has already ended.")], flags: 64 });
-        return;
-      }
-      // Cancel the scheduled timer and end immediately
-      const timer = activeGiveawayTimers.get(gwId);
-      if (timer) { clearTimeout(timer); activeGiveawayTimers.delete(gwId); }
-      await i.deferReply({ flags: 64 });
-      await endGiveaway(gw);
-      await i.editReply({ embeds: [okEmbed("Giveaway ended.")] });
+    if (!gw.ended) {
+      await i.reply({ embeds: [errEmbed("That giveaway is still running.")], flags: 64 });
       return;
     }
+    if (gw.entries.length === 0) {
+      await i.reply({ embeds: [errEmbed("No entries to reroll from.")], flags: 64 });
+      return;
+    }
+    await i.deferReply({ flags: 64 });
+    const pool = gw.entries.filter((id) => !gw.claimedBy.includes(id));
+    const eligible = pool.length > 0 ? pool : gw.entries;
+    const newWinner = eligible[Math.floor(Math.random() * eligible.length)];
+    const ch = i.channel as TextChannel;
+    await ch.send({ content: `🎉 Reroll! Congratulations <@${newWinner}>, you won **${gw.prize}**!` });
+    await i.editReply({ embeds: [new EmbedBuilder().setColor(BOT_COLOR).setDescription(`New winner: <@${newWinner}>`)] });
+    return;
+  }
+
+  if (commandName === "gend") {
+    const member = i.member as GuildMember;
+    if (!canManageGiveaway(member)) {
+      await i.reply({ embeds: [errEmbed("You need the Giveaway Manager role to end giveaways.")], flags: 64 });
+      return;
+    }
+    const gwId = i.options.getString("id", true).trim();
+    const gw = storage.getGiveaway(gwId);
+    if (!gw) {
+      await i.reply({ embeds: [errEmbed(`No giveaway found with ID \`${gwId}\`.`)], flags: 64 });
+      return;
+    }
+    if (gw.ended) {
+      await i.reply({ embeds: [errEmbed("That giveaway has already ended.")], flags: 64 });
+      return;
+    }
+    const timer = activeGiveawayTimers.get(gwId);
+    if (timer) { clearTimeout(timer); activeGiveawayTimers.delete(gwId); }
+    await i.deferReply({ flags: 64 });
+    await endGiveaway(gw);
+    await i.editReply({ embeds: [okEmbed("Giveaway ended.")] });
+    return;
   }
 
   if (commandName === "tickets") {
