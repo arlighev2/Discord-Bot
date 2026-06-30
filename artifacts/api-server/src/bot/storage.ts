@@ -81,6 +81,8 @@ interface BotData {
   xp: Record<string, XpEntry>;
   violations: Record<string, ViolationEntry>;
   spawners: Record<string, SpawnerData>;
+  spawnerPanelChannelId: string;
+  spawnerPanelMessageId: string;
 }
 
 const DATA_FILE = path.resolve(process.cwd(), "bot-data.json");
@@ -106,6 +108,8 @@ function defaultData(): BotData {
     stickers: {},
     warns: {},
     welcomeChannelId: "",
+    spawnerPanelChannelId: "",
+    spawnerPanelMessageId: "",
     spawners: {
       "Skeleton":   { buyPrice: "3.3m", sellPrice: "3.9m", stock: 209 },
       "Iron Golem": { buyPrice: "5.5m", sellPrice: "9m",   stock: 0   },
@@ -490,5 +494,18 @@ export const storage = {
     _data.spawners[properName] = { buyPrice: null, sellPrice: null, stock: 0 };
     saveData(_data);
     return true;
+  },
+
+  setSpawnerPanel(channelId: string, messageId: string): void {
+    _data.spawnerPanelChannelId = channelId;
+    _data.spawnerPanelMessageId = messageId;
+    saveData(_data);
+  },
+
+  getSpawnerPanel(): { channelId: string; messageId: string } {
+    return {
+      channelId: _data.spawnerPanelChannelId ?? "",
+      messageId: _data.spawnerPanelMessageId ?? "",
+    };
   },
 };
