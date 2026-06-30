@@ -3195,8 +3195,8 @@ async function handleButton(i: ButtonInteraction) {
         .setColor(GOLD_COLOR)
         .setTitle("Farm Panel")
         .addFields(
-          { name: "Description", value: data.farmDescription.slice(0, 900) },
-          { name: "Farm List", value: data.farmList.slice(0, 900) },
+          { name: "Description", value: data.farmDescription?.slice(0, 900) || "No description set." },
+          { name: "Farm List", value: data.farmList?.slice(0, 900) || "No farms listed." },
         );
       await i.update({
         embeds: [embed],
@@ -4441,6 +4441,8 @@ function skellyTicketComponents() {
 }
 
 function farmTicketPanelEmbed() {
+  const data = storage.getData();
+  const farmList = data.farmList?.trim() || "No farms currently listed.";
   return new EmbedBuilder()
     .setColor(GOLD_COLOR)
     .setTitle("Building Services")
@@ -4463,6 +4465,7 @@ function farmTicketPanelEmbed() {
       "**Partnership**",
       "Interested in partnering with us? Click the button below.",
     ].join("\n"))
+    .addFields({ name: "Available Farms", value: farmList.slice(0, 1024) })
     .setTimestamp();
 }
 
@@ -4480,9 +4483,8 @@ function farmInfoEmbed() {
   return new EmbedBuilder()
     .setColor(GOLD_COLOR)
     .setTitle("Buy Farms")
-    .setDescription(data.farmDescription)
-    .addFields({ name: "Available Farms", value: data.farmList.slice(0, 1024) })
-    
+    .setDescription(data.farmDescription?.trim() || "No description set.")
+    .addFields({ name: "Available Farms", value: data.farmList?.trim().slice(0, 1024) || "No farms currently listed." })
     .setTimestamp();
 }
 
