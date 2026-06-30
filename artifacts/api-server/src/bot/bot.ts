@@ -1080,6 +1080,9 @@ async function registerCommands(client: Client) {
           .setName("new")
           .setDescription("Add a new spawner type")
           .addStringOption((o) => o.setName("name").setDescription("Spawner name e.g. Blaze").setRequired(true)),
+      )
+      .addSubcommand((sub) =>
+        sub.setName("refreshpanel").setDescription("Force-refresh the live spawner price panel embed"),
       ),
   ].map((c) => c.toJSON());
 
@@ -2022,11 +2025,12 @@ async function handleCommand(i: ChatInputCommandInteraction) {
         return;
       }
       const verb = sub === "add" ? "Added" : "Removed";
-      await i.reply({
-        embeds: [okEmbed(`${verb} **${amount}** to **${result.key} Spawners** stock.\nNew stock: **${result.data.stock}**`)],
-        flags: 64,
+      await i.deferReply({ flags: 64 });
+      const panelResult1 = await refreshSpawnerPanel(i.client);
+      const panelNote1 = panelResult1.ok ? "\n✅ Panel updated." : `\n⚠️ Panel not updated: ${panelResult1.reason}`;
+      await i.editReply({
+        embeds: [okEmbed(`${verb} **${amount}** to **${result.key} Spawners** stock.\nNew stock: **${result.data.stock}**${panelNote1}`)],
       });
-      refreshSpawnerPanel(i.client).catch(() => {});
       return;
     }
 
@@ -2045,11 +2049,12 @@ async function handleCommand(i: ChatInputCommandInteraction) {
         return;
       }
       const displayPrice = price === null ? "removed" : `set to **${price}**`;
-      await i.reply({
-        embeds: [okEmbed(`**${result.key} Spawners** ${side} price ${displayPrice}.`)],
-        flags: 64,
+      await i.deferReply({ flags: 64 });
+      const panelResult2 = await refreshSpawnerPanel(i.client);
+      const panelNote2 = panelResult2.ok ? "\n✅ Panel updated." : `\n⚠️ Panel not updated: ${panelResult2.reason}`;
+      await i.editReply({
+        embeds: [okEmbed(`**${result.key} Spawners** ${side} price ${displayPrice}.${panelNote2}`)],
       });
-      refreshSpawnerPanel(i.client).catch(() => {});
       return;
     }
 
@@ -2065,6 +2070,21 @@ async function handleCommand(i: ChatInputCommandInteraction) {
         return;
       }
       await i.reply({ embeds: [okEmbed(`Added **${name} Spawners** to the list. Use \`/spawner setprice\` to configure prices.`)], flags: 64 });
+      return;
+    }
+
+    if (sub === "refreshpanel") {
+      if (!isOwnerOrCoOwner(member)) {
+        await i.reply({ embeds: [errEmbed("Only the Owner or Co-Owner can refresh the panel.")], flags: 64 });
+        return;
+      }
+      await i.deferReply({ flags: 64 });
+      const r = await refreshSpawnerPanel(i.client);
+      if (r.ok) {
+        await i.editReply({ embeds: [okEmbed("✅ Spawner panel updated.")] });
+      } else {
+        await i.editReply({ embeds: [errEmbed(`Could not update panel: ${r.reason}\n\nUse the owner panel → Skelly Panel → Send Skelly Panel to register a new one.`)] });
+      }
       return;
     }
   }
@@ -4144,7 +4164,7 @@ function staffAppPanelEmbed() {
       [
         "**Requirements**",
         "• Must be **14+**.",
-        "• Must have **25 vouches**.",
+        "• Must have **10 vouches**.",
         "",
         "**Rules**",
         "• Do not ask about your application after submitting.",
@@ -4220,16 +4240,18 @@ function getSkellyPriceText(): string {
   return lines.join("\n");
 }
 
-async function refreshSpawnerPanel(client: Client): Promise<void> {
+async function refreshSpawnerPanel(client: Client): Promise<{ ok: boolean; reason?: string }> {
   const { channelId, messageId } = storage.getSpawnerPanel();
-  if (!channelId || !messageId) return;
+  if (!channelId || !messageId) return { ok: false, reason: "no panel registered" };
   try {
     const ch = await client.channels.fetch(channelId) as TextChannel | null;
-    if (!ch) return;
+    if (!ch) return { ok: false, reason: "channel not found" };
     const msg = await ch.messages.fetch(messageId);
     await msg.edit({ embeds: [skellyTicketPanelEmbed()], components: skellyTicketComponents() });
-  } catch {
-    // panel message may have been deleted — ignore
+    return { ok: true };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, reason: msg };
   }
 }
 

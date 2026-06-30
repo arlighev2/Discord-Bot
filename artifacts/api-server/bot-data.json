@@ -3,8 +3,8 @@
   "ticketCounter": 16,
   "xp": {
     "1491457883219693720": {
-      "xp": 200,
-      "lastMessage": 1782767770498
+      "xp": 202,
+      "lastMessage": 1782786308096
     },
     "1384009855043633237": {
       "xp": 71,
@@ -393,13 +393,13 @@
     ]
   },
   "welcomeChannelId": "",
-  "spawnerPanelChannelId": "",
-  "spawnerPanelMessageId": "",
+  "spawnerPanelChannelId": "1518633695404101773",
+  "spawnerPanelMessageId": "1521340762288292065",
   "spawners": {
     "Skeleton": {
       "buyPrice": "3.3m",
       "sellPrice": "3.9m",
-      "stock": 209
+      "stock": 619
     },
     "Iron Golem": {
       "buyPrice": "5.5m",
