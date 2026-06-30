@@ -1045,6 +1045,15 @@ async function registerCommands(client: Client) {
       .setDescription("View your rank card and XP progress")
       .addUserOption((o) => o.setName("user").setDescription("User to check (defaults to you)").setRequired(false)),
     new SlashCommandBuilder()
+      .setName("blacklist")
+      .setDescription("Blacklist a user from submitting any applications (owner/co-owner only)")
+      .addUserOption((o) => o.setName("user").setDescription("User to blacklist").setRequired(true))
+      .addStringOption((o) => o.setName("reason").setDescription("Reason for blacklist").setRequired(false)),
+    new SlashCommandBuilder()
+      .setName("unblacklist")
+      .setDescription("Remove a user from the application blacklist (owner/co-owner only)")
+      .addUserOption((o) => o.setName("user").setDescription("User to unblacklist").setRequired(true)),
+    new SlashCommandBuilder()
       .setName("spawner")
       .setDescription("Manage spawner stock and prices (staff only)")
       .addSubcommand((sub) =>
@@ -1987,6 +1996,54 @@ async function handleCommand(i: ChatInputCommandInteraction) {
     }
   }
 
+  if (commandName === "blacklist") {
+    if (!guild) return;
+    const member = i.member as GuildMember;
+    if (!isOwnerOrCoOwner(member)) {
+      await i.reply({ embeds: [errEmbed("Only the Owner or Co-Owner can blacklist users.")], flags: 64 });
+      return;
+    }
+    const target = i.options.getUser("user", true);
+    const reason = i.options.getString("reason") ?? "No reason provided";
+    storage.addAppBlacklist(target.id, reason, user.tag);
+    await i.reply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(ERROR_COLOR)
+          .setTitle("🚫 Application Blacklist")
+          .setDescription(`<@${target.id}> has been blacklisted from submitting applications.`)
+          .addFields({ name: "Reason", value: reason })
+          .setTimestamp(),
+      ],
+    });
+    return;
+  }
+
+  if (commandName === "unblacklist") {
+    if (!guild) return;
+    const member = i.member as GuildMember;
+    if (!isOwnerOrCoOwner(member)) {
+      await i.reply({ embeds: [errEmbed("Only the Owner or Co-Owner can unblacklist users.")], flags: 64 });
+      return;
+    }
+    const target = i.options.getUser("user", true);
+    const removed = storage.removeAppBlacklist(target.id);
+    if (!removed) {
+      await i.reply({ embeds: [errEmbed(`<@${target.id}> is not on the application blacklist.`)], flags: 64 });
+      return;
+    }
+    await i.reply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(SUCCESS_COLOR)
+          .setTitle("✅ Application Blacklist Removed")
+          .setDescription(`<@${target.id}> has been removed from the application blacklist and may now submit applications.`)
+          .setTimestamp(),
+      ],
+    });
+    return;
+  }
+
   if (commandName === "spawner") {
     if (!guild) return;
     const member = i.member as GuildMember;
@@ -2477,6 +2534,11 @@ async function handleButton(i: ButtonInteraction) {
   }
 
   if (customId === "staff_apply") {
+    const bl1 = storage.getAppBlacklist(user.id);
+    if (bl1) {
+      await i.reply({ embeds: [errEmbed(`You are blacklisted from submitting applications.\n**Reason:** ${bl1.reason}`)], flags: 64 });
+      return;
+    }
     if (activeStaffApplications.has(user.id)) {
       await i.reply({
         embeds: [errEmbed("You already have an application in progress. Please check your DMs.")],
@@ -2499,11 +2561,21 @@ async function handleButton(i: ButtonInteraction) {
   }
 
   if (customId === "sa_builder_apply") {
+    const bl2 = storage.getAppBlacklist(user.id);
+    if (bl2) {
+      await i.reply({ embeds: [errEmbed(`You are blacklisted from submitting applications.\n**Reason:** ${bl2.reason}`)], flags: 64 });
+      return;
+    }
     await handleTicketCreate(i, "builder-application", false);
     return;
   }
 
   if (customId === "sa_schematic_apply") {
+    const bl3 = storage.getAppBlacklist(user.id);
+    if (bl3) {
+      await i.reply({ embeds: [errEmbed(`You are blacklisted from submitting applications.\n**Reason:** ${bl3.reason}`)], flags: 64 });
+      return;
+    }
     await handleTicketCreate(i, "schematic-application", false);
     return;
   }

@@ -83,6 +83,7 @@ interface BotData {
   spawners: Record<string, SpawnerData>;
   spawnerPanelChannelId: string;
   spawnerPanelMessageId: string;
+  appBlacklist: Record<string, { reason: string; by: string; at: string }>;
 }
 
 const DATA_FILE = path.resolve(process.cwd(), "bot-data.json");
@@ -110,6 +111,7 @@ function defaultData(): BotData {
     welcomeChannelId: "",
     spawnerPanelChannelId: "",
     spawnerPanelMessageId: "",
+    appBlacklist: {},
     spawners: {
       "Skeleton":   { buyPrice: "3.3m", sellPrice: "3.9m", stock: 209 },
       "Iron Golem": { buyPrice: "5.5m", sellPrice: "9m",   stock: 0   },
@@ -494,6 +496,27 @@ export const storage = {
     _data.spawners[properName] = { buyPrice: null, sellPrice: null, stock: 0 };
     saveData(_data);
     return true;
+  },
+
+  addAppBlacklist(userId: string, reason: string, by: string): void {
+    if (!_data.appBlacklist) _data.appBlacklist = {};
+    _data.appBlacklist[userId] = { reason, by, at: new Date().toISOString() };
+    saveData(_data);
+  },
+
+  removeAppBlacklist(userId: string): boolean {
+    if (!_data.appBlacklist?.[userId]) return false;
+    delete _data.appBlacklist[userId];
+    saveData(_data);
+    return true;
+  },
+
+  getAppBlacklist(userId: string): { reason: string; by: string; at: string } | null {
+    return _data.appBlacklist?.[userId] ?? null;
+  },
+
+  getAllAppBlacklisted(): Record<string, { reason: string; by: string; at: string }> {
+    return _data.appBlacklist ?? {};
   },
 
   setSpawnerPanel(channelId: string, messageId: string): void {
