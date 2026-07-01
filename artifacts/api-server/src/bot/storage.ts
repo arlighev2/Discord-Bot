@@ -65,6 +65,14 @@ export interface SpawnerData {
   stock: number;
 }
 
+export interface ReactionRoleEntry {
+  messageId: string;
+  channelId: string;
+  guildId: string;
+  emoji: string;
+  roleId: string;
+}
+
 interface BotData {
   tickets: Record<string, TicketEntry>;
   ticketCounter: number;
@@ -84,6 +92,7 @@ interface BotData {
   spawnerPanelChannelId: string;
   spawnerPanelMessageId: string;
   appBlacklist: Record<string, { reason: string; by: string; at: string }>;
+  reactionRoles: Record<string, ReactionRoleEntry>;
 }
 
 // Store data OUTSIDE the workspace so it is never overwritten by deployments or git.
@@ -115,6 +124,7 @@ function defaultData(): BotData {
     spawnerPanelChannelId: "",
     spawnerPanelMessageId: "",
     appBlacklist: {},
+    reactionRoles: {},
     spawners: {
       "Skeleton":   { buyPrice: "3.3m", sellPrice: "3.9m", stock: 209 },
       "Iron Golem": { buyPrice: "5.5m", sellPrice: "9m",   stock: 0   },
@@ -563,5 +573,34 @@ export const storage = {
       channelId: _data.spawnerPanelChannelId ?? "",
       messageId: _data.spawnerPanelMessageId ?? "",
     };
+  },
+
+  addReactionRole(entry: ReactionRoleEntry): void {
+    if (!_data.reactionRoles) _data.reactionRoles = {};
+    const key = `${entry.messageId}:${entry.emoji}`;
+    _data.reactionRoles[key] = entry;
+    saveData(_data);
+  },
+
+  removeReactionRole(messageId: string, emoji: string): boolean {
+    if (!_data.reactionRoles) return false;
+    const key = `${messageId}:${emoji}`;
+    if (!_data.reactionRoles[key]) return false;
+    delete _data.reactionRoles[key];
+    saveData(_data);
+    return true;
+  },
+
+  getReactionRole(messageId: string, emoji: string): ReactionRoleEntry | null {
+    return _data.reactionRoles?.[`${messageId}:${emoji}`] ?? null;
+  },
+
+  getReactionRolesForMessage(messageId: string): ReactionRoleEntry[] {
+    if (!_data.reactionRoles) return [];
+    return Object.values(_data.reactionRoles).filter((r) => r.messageId === messageId);
+  },
+
+  getAllReactionRoles(): ReactionRoleEntry[] {
+    return Object.values(_data.reactionRoles ?? {});
   },
 };

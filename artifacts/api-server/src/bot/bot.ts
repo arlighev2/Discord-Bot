@@ -578,8 +578,9 @@ export function createBotClient(): Client | null {
       GatewayIntentBits.GuildModeration,
       GatewayIntentBits.DirectMessages,
       GatewayIntentBits.AutoModerationExecution,
+      GatewayIntentBits.GuildMessageReactions,
     ],
-    partials: [Partials.Channel, Partials.Message],
+    partials: [Partials.Channel, Partials.Message, Partials.Reaction],
   });
 
   _client = client;
@@ -977,6 +978,53 @@ export function createBotClient(): Client | null {
     })();
   });
 
+  // ── Reaction roles ──────────────────────────────────────────────────────────
+  client.on("messageReactionAdd", async (reaction, user) => {
+    if (user.bot) return;
+    if (reaction.partial) {
+      try { await reaction.fetch(); } catch { return; }
+    }
+    if (!reaction.message.guild) return;
+
+    const emojiKey = reaction.emoji.id
+      ? `<:${reaction.emoji.name}:${reaction.emoji.id}>`
+      : (reaction.emoji.name ?? "");
+
+    const entry = storage.getReactionRole(reaction.message.id, emojiKey);
+    if (!entry) return;
+
+    const guild = reaction.message.guild;
+    const member = await guild.members.fetch(user.id).catch(() => null);
+    if (!member) return;
+
+    if (!member.roles.cache.has(entry.roleId)) {
+      await member.roles.add(entry.roleId).catch(() => {});
+    }
+  });
+
+  client.on("messageReactionRemove", async (reaction, user) => {
+    if (user.bot) return;
+    if (reaction.partial) {
+      try { await reaction.fetch(); } catch { return; }
+    }
+    if (!reaction.message.guild) return;
+
+    const emojiKey = reaction.emoji.id
+      ? `<:${reaction.emoji.name}:${reaction.emoji.id}>`
+      : (reaction.emoji.name ?? "");
+
+    const entry = storage.getReactionRole(reaction.message.id, emojiKey);
+    if (!entry) return;
+
+    const guild = reaction.message.guild;
+    const member = await guild.members.fetch(user.id).catch(() => null);
+    if (!member) return;
+
+    if (member.roles.cache.has(entry.roleId)) {
+      await member.roles.remove(entry.roleId).catch(() => {});
+    }
+  });
+
   client.login(TOKEN).catch((e) => logger.error({ err: e }, "Login failed"));
   return client;
 }
@@ -1169,6 +1217,28 @@ async function registerCommands(client: Client) {
     new SlashCommandBuilder()
       .setName("resetlevels")
       .setDescription("Reset ALL player XP and levels to zero (owner only)"),
+    new SlashCommandBuilder()
+      .setName("reactionrole")
+      .setDescription("Manage reaction roles")
+      .addSubcommand((sub) =>
+        sub
+          .setName("add")
+          .setDescription("Attach an emoji reaction to a message that grants a role when clicked")
+          .addStringOption((o) => o.setName("message_id").setDescription("ID of the message to react to").setRequired(true))
+          .addStringOption((o) => o.setName("emoji").setDescription("Emoji to use (e.g. 🎮 or custom :name:)").setRequired(true))
+          .addRoleOption((o) => o.setName("role").setDescription("Role to grant/remove").setRequired(true))
+          .addStringOption((o) => o.setName("channel_id").setDescription("Channel the message is in (defaults to current channel)").setRequired(false)),
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName("remove")
+          .setDescription("Remove a reaction role from a message")
+          .addStringOption((o) => o.setName("message_id").setDescription("Message ID").setRequired(true))
+          .addStringOption((o) => o.setName("emoji").setDescription("Emoji to remove").setRequired(true)),
+      )
+      .addSubcommand((sub) =>
+        sub.setName("list").setDescription("List all active reaction roles"),
+      ),
   ].map((c) => c.toJSON());
 
   try {
@@ -2231,6 +2301,111 @@ async function handleCommand(i: ChatInputCommandInteraction) {
       } else {
         await i.editReply({ embeds: [errEmbed(`Could not update panel: ${r.reason}\n\nUse the owner panel → Skelly Panel → Send Skelly Panel to register a new one.`)] });
       }
+      return;
+    }
+  }
+
+  if (commandName === "reactionrole") {
+    if (!guild) return;
+    const member = i.member as GuildMember;
+    if (!isOwnerOrCoOwner(member) && !isStaff(member)) {
+      await i.reply({ embeds: [errEmbed("Only staff can manage reaction roles.")], flags: 64 });
+      return;
+    }
+    const sub = i.options.getSubcommand();
+
+    if (sub === "add") {
+      const messageId = i.options.getString("message_id", true).trim();
+      const emojiRaw = i.options.getString("emoji", true).trim();
+      const role = i.options.getRole("role", true);
+      const channelIdOpt = i.options.getString("channel_id", false)?.trim();
+      const targetChannelId = channelIdOpt ?? channel?.id ?? "";
+
+      const targetChannel = guild.channels.cache.get(targetChannelId) as TextChannel | undefined;
+      if (!targetChannel) {
+        await i.reply({ embeds: [errEmbed("Could not find that channel. Make sure the bot can see it.")], flags: 64 });
+        return;
+      }
+
+      await i.deferReply({ flags: 64 });
+      let targetMessage: Message | null = null;
+      try {
+        targetMessage = await targetChannel.messages.fetch(messageId);
+      } catch {
+        await i.editReply({ embeds: [errEmbed("Could not find that message. Make sure the message ID and channel are correct.")] });
+        return;
+      }
+
+      try {
+        await targetMessage.react(emojiRaw);
+      } catch {
+        await i.editReply({ embeds: [errEmbed(`Could not react with **${emojiRaw}**. Make sure it's a valid emoji the bot has access to.`)] });
+        return;
+      }
+
+      storage.addReactionRole({
+        messageId,
+        channelId: targetChannelId,
+        guildId: guild.id,
+        emoji: emojiRaw,
+        roleId: role.id,
+      });
+
+      await i.editReply({
+        embeds: [okEmbed(`✅ Reaction role set up!\n\n**Message:** [Jump](https://discord.com/channels/${guild.id}/${targetChannelId}/${messageId})\n**Emoji:** ${emojiRaw}\n**Role:** <@&${role.id}>\n\nMembers who click ${emojiRaw} will get the role. Removing the reaction removes it.`)],
+      });
+      return;
+    }
+
+    if (sub === "remove") {
+      const messageId = i.options.getString("message_id", true).trim();
+      const emojiRaw = i.options.getString("emoji", true).trim();
+
+      const entry = storage.getReactionRole(messageId, emojiRaw);
+      if (!entry) {
+        await i.reply({ embeds: [errEmbed("No reaction role found for that message + emoji combo.")], flags: 64 });
+        return;
+      }
+
+      await i.deferReply({ flags: 64 });
+
+      storage.removeReactionRole(messageId, emojiRaw);
+
+      const targetChannel = guild.channels.cache.get(entry.channelId) as TextChannel | undefined;
+      if (targetChannel) {
+        try {
+          const msg = await targetChannel.messages.fetch(messageId);
+          const reaction = msg.reactions.cache.find((r) => {
+            const id = r.emoji.id ? `<:${r.emoji.name}:${r.emoji.id}>` : r.emoji.name;
+            return id === emojiRaw || r.emoji.name === emojiRaw;
+          });
+          if (reaction) await reaction.remove();
+        } catch {}
+      }
+
+      await i.editReply({ embeds: [okEmbed(`Reaction role for ${emojiRaw} removed.`)] });
+      return;
+    }
+
+    if (sub === "list") {
+      const all = storage.getAllReactionRoles();
+      if (all.length === 0) {
+        await i.reply({ embeds: [infoEmbed("No reaction roles configured.")], flags: 64 });
+        return;
+      }
+      const lines = all.map((r) =>
+        `**Message:** \`${r.messageId}\` | **Emoji:** ${r.emoji} | **Role:** <@&${r.roleId}> | **Channel:** <#${r.channelId}>`,
+      );
+      await i.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x5865f2)
+            .setTitle(`Reaction Roles (${all.length})`)
+            .setDescription(lines.join("\n"))
+            .setTimestamp(),
+        ],
+        flags: 64,
+      });
       return;
     }
   }
