@@ -759,9 +759,8 @@ export function createBotClient(): Client | null {
   const XP_MIN = 2;
   const XP_MAX = 4;
 
+  // Deduplicate Discord event re-deliveries — key is message ID, clears after 30s
   const _processedMsgIds = new Set<string>();
-// Track the highest level announced per user this session to prevent duplicate announcements
-const _announcedLevels = new Map<string, number>();
 
   client.on("messageCreate", (msg) => {
     if (msg.author.bot) return;
@@ -770,28 +769,24 @@ const _announcedLevels = new Map<string, number>();
     setTimeout(() => _processedMsgIds.delete(msg.id), 30_000);
 
     // ── XP tracking + level-up announcements ──
-    if (msg.guild && !msg.author.bot) {
+    if (msg.guild) {
       void (async () => {
         const now = Date.now();
         const entry = storage.getXP(msg.author.id);
-        if (now - entry.lastMessage >= XP_COOLDOWN_MS) {
-          // Immediately claim the cooldown slot synchronously — prevents concurrent
-          // messages from the same user both passing the cooldown window.
-          storage.setXpCooldown(msg.author.id);
-          const gained = Math.floor(Math.random() * (XP_MAX - XP_MIN + 1)) + XP_MIN;
-          const oldLevel = computeLevel(entry.xp).level;
-          storage.addXP(msg.author.id, gained);
-          const newEntry = storage.getXP(msg.author.id);
-          const newLevel = computeLevel(newEntry.xp).level;
-          // Only announce each level once per session — prevents duplicates if two
-          // messages somehow race through (e.g. Discord delivers a burst on reconnect).
-          const lastAnnounced = _announcedLevels.get(msg.author.id) ?? -1;
-          if (newLevel > oldLevel && newLevel > lastAnnounced && newLevel >= 1 && newLevel <= 100) {
-            _announcedLevels.set(msg.author.id, newLevel);
-            const lvlCh = msg.guild.channels.cache.get(LEVELUP_CHANNEL_ID) as TextChannel | null;
-            if (lvlCh) {
-              await lvlCh.send({ content: `<@${msg.author.id}> has reached level **${newLevel}**. GG!` }).catch(() => {});
-            }
+        if (now - entry.lastMessage < XP_COOLDOWN_MS) return;
+
+        // Claim the cooldown slot immediately (synchronous in-memory + disk write)
+        // so any concurrent handler for the same user sees it and skips.
+        const gained = Math.floor(Math.random() * (XP_MAX - XP_MIN + 1)) + XP_MIN;
+        const oldLevel = computeLevel(entry.xp).level;
+        storage.addXP(msg.author.id, gained); // saves xp + updates lastMessage
+        const newEntry = storage.getXP(msg.author.id);
+        const newLevel = computeLevel(newEntry.xp).level;
+
+        if (newLevel > oldLevel && newLevel >= 1 && newLevel <= 100) {
+          const lvlCh = msg.guild.channels.cache.get(LEVELUP_CHANNEL_ID) as TextChannel | null;
+          if (lvlCh) {
+            await lvlCh.send({ content: `<@${msg.author.id}> has reached level **${newLevel}**. GG!` }).catch(() => {});
           }
         }
 
@@ -1347,7 +1342,6 @@ async function handleCommand(i: ChatInputCommandInteraction) {
       return;
     }
     storage.resetAllXP();
-    _announcedLevels.clear();
     await i.reply({
       embeds: [
         new EmbedBuilder()
