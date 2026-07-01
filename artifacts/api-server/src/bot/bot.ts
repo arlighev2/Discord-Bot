@@ -1225,9 +1225,7 @@ async function registerCommands(client: Client) {
           .setName("create")
           .setDescription("Creates an embed with the specified color in the specified channel")
           .addStringOption((o) => o.setName("color").setDescription("Hex color code e.g. #ff0000").setRequired(true))
-          .addStringOption((o) => o.setName("text").setDescription("Body text of the embed").setRequired(true))
-          .addStringOption((o) => o.setName("channel_id").setDescription("Channel to send the embed in (defaults to current channel)").setRequired(false))
-          .addStringOption((o) => o.setName("title").setDescription("Optional embed title").setRequired(false)),
+          .addStringOption((o) => o.setName("channel_id").setDescription("Channel to send the embed in (defaults to current channel)").setRequired(false)),
       ),
     new SlashCommandBuilder()
       .setName("reactionrole")
@@ -2325,8 +2323,6 @@ async function handleCommand(i: ChatInputCommandInteraction) {
       return;
     }
     const colorRaw = i.options.getString("color", true).trim();
-    const text = i.options.getString("text", true);
-    const title = i.options.getString("title", false) ?? undefined;
     const channelIdOpt = i.options.getString("channel_id", false)?.trim();
     const targetChannelId = channelIdOpt ?? channel?.id ?? "";
 
@@ -2336,17 +2332,35 @@ async function handleCommand(i: ChatInputCommandInteraction) {
       return;
     }
 
-    const targetChannel = guild.channels.cache.get(targetChannelId) as TextChannel | undefined;
-    if (!targetChannel) {
+    if (!guild.channels.cache.get(targetChannelId)) {
       await i.reply({ embeds: [errEmbed("Could not find that channel.")], flags: 64 });
       return;
     }
 
-    const embed = new EmbedBuilder().setColor(parsed).setDescription(text);
-    if (title) embed.setTitle(title);
+    const safeColor = colorRaw.replace(/[^a-fA-F0-9#]/g, "").slice(0, 7);
+    const modal = new ModalBuilder()
+      .setCustomId(`embed_create:${safeColor}:${targetChannelId}`)
+      .setTitle("Embed Builder")
+      .addComponents(
+        new ActionRowBuilder<TextInputBuilder>().addComponents(
+          new TextInputBuilder()
+            .setCustomId("embed_title")
+            .setLabel("Title (optional)")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(256),
+        ),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(
+          new TextInputBuilder()
+            .setCustomId("embed_body")
+            .setLabel("Body text — use \\n for new lines")
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(4000),
+        ),
+      );
 
-    await targetChannel.send({ embeds: [embed] });
-    await i.reply({ embeds: [okEmbed(`Embed sent in <#${targetChannelId}>.`)], flags: 64 });
+    await i.showModal(modal);
     return;
   }
 
@@ -3858,6 +3872,28 @@ async function handleChannelSelect(i: ChannelSelectMenuInteraction) {
 
 async function handleModal(i: ModalSubmitInteraction) {
   const { customId, user } = i;
+
+  // ─── Embed Builder ───────────────────────────────────────────────────────
+  if (customId.startsWith("embed_create:")) {
+    const [, colorPart, channelId] = customId.split(":");
+    const title = i.fields.getTextInputValue("embed_title").trim() || undefined;
+    const bodyRaw = i.fields.getTextInputValue("embed_body");
+    const body = bodyRaw.replace(/\\n/g, "\n");
+
+    const colorNum = parseInt((colorPart ?? "").replace(/^#/, ""), 16);
+    const guild = i.guild;
+    if (!guild || !channelId) { await i.reply({ content: "Something went wrong.", flags: 64 }); return; }
+
+    const targetChannel = guild.channels.cache.get(channelId) as TextChannel | undefined;
+    if (!targetChannel) { await i.reply({ content: "Channel not found.", flags: 64 }); return; }
+
+    const embed = new EmbedBuilder().setColor(isNaN(colorNum) ? 0x5865f2 : colorNum).setDescription(body);
+    if (title) embed.setTitle(title);
+
+    await targetChannel.send({ embeds: [embed] });
+    await i.reply({ embeds: [okEmbed(`Embed sent in <#${channelId}>.`)], flags: 64 });
+    return;
+  }
 
   // ─── Giveaway Create ────────────────────────────────────────────────────
   if (customId === "mod_giveaway_create") {
