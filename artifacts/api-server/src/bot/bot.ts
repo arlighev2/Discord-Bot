@@ -1218,6 +1218,18 @@ async function registerCommands(client: Client) {
       .setName("resetlevels")
       .setDescription("Reset ALL player XP and levels to zero (owner only)"),
     new SlashCommandBuilder()
+      .setName("embed")
+      .setDescription("Create and send an embed message")
+      .addSubcommand((sub) =>
+        sub
+          .setName("create")
+          .setDescription("Creates an embed with the specified color in the specified channel")
+          .addStringOption((o) => o.setName("color").setDescription("Hex color code e.g. #ff0000").setRequired(true))
+          .addStringOption((o) => o.setName("text").setDescription("Body text of the embed").setRequired(true))
+          .addStringOption((o) => o.setName("channel_id").setDescription("Channel to send the embed in (defaults to current channel)").setRequired(false))
+          .addStringOption((o) => o.setName("title").setDescription("Optional embed title").setRequired(false)),
+      ),
+    new SlashCommandBuilder()
       .setName("reactionrole")
       .setDescription("Manage reaction roles")
       .addSubcommand((sub) =>
@@ -2305,11 +2317,44 @@ async function handleCommand(i: ChatInputCommandInteraction) {
     }
   }
 
+  if (commandName === "embed") {
+    if (!guild) return;
+    const member = i.member as GuildMember;
+    if (!isMod(member)) {
+      await i.reply({ embeds: [errEmbed("Only moderators can use this command.")], flags: 64 });
+      return;
+    }
+    const colorRaw = i.options.getString("color", true).trim();
+    const text = i.options.getString("text", true);
+    const title = i.options.getString("title", false) ?? undefined;
+    const channelIdOpt = i.options.getString("channel_id", false)?.trim();
+    const targetChannelId = channelIdOpt ?? channel?.id ?? "";
+
+    const parsed = parseInt(colorRaw.replace(/^#/, ""), 16);
+    if (isNaN(parsed)) {
+      await i.reply({ embeds: [errEmbed("Invalid color. Use a hex code like `#ff0000`.")], flags: 64 });
+      return;
+    }
+
+    const targetChannel = guild.channels.cache.get(targetChannelId) as TextChannel | undefined;
+    if (!targetChannel) {
+      await i.reply({ embeds: [errEmbed("Could not find that channel.")], flags: 64 });
+      return;
+    }
+
+    const embed = new EmbedBuilder().setColor(parsed).setDescription(text);
+    if (title) embed.setTitle(title);
+
+    await targetChannel.send({ embeds: [embed] });
+    await i.reply({ embeds: [okEmbed(`Embed sent in <#${targetChannelId}>.`)], flags: 64 });
+    return;
+  }
+
   if (commandName === "reactionrole") {
     if (!guild) return;
     const member = i.member as GuildMember;
-    if (!isOwnerOrCoOwner(member) && !isStaff(member)) {
-      await i.reply({ embeds: [errEmbed("Only staff can manage reaction roles.")], flags: 64 });
+    if (!isMod(member)) {
+      await i.reply({ embeds: [errEmbed("Only moderators can manage reaction roles.")], flags: 64 });
       return;
     }
     const sub = i.options.getSubcommand();
