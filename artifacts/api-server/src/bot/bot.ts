@@ -4641,21 +4641,15 @@ const SKELLY_PRICE_CHANNEL = "https://discord.com/channels/1450662191890956322/1
 
 function getSkellyPriceText(): string {
   const spawners = storage.getSpawners();
-  const entries = Object.entries(spawners);
-  const buying = entries.filter(([, s]) => s.buyPrice !== null);
-  const selling = entries.filter(([, s]) => s.sellPrice !== null);
+  const SELL_SPAWNERS = ["Skeleton", "Iron Golem", "Creeper"];
   const lines: string[] = [];
-  if (buying.length > 0) {
-    lines.push("**Buying:**");
-    for (const [name, s] of buying) {
-      lines.push(`• ${name} Spawners — ${s.buyPrice} each | Amount: ${s.stock}`);
-    }
-  }
-  if (selling.length > 0) {
-    lines.push("", "**Selling:**");
-    for (const [name, s] of selling) {
-      lines.push(`• ${name} Spawners — ${s.sellPrice} each`);
-    }
+  lines.push("**Selling:**");
+  for (const name of SELL_SPAWNERS) {
+    const key = Object.keys(spawners).find((k) => k.toLowerCase() === name.toLowerCase());
+    const s = key ? spawners[key] : null;
+    const price = s?.sellPrice ?? "—";
+    const stock = s?.stock ?? 0;
+    lines.push(`• ${name} Spawners — ${price} each | Amount: ${stock}`);
   }
   lines.push("", "**Notes:**", "Our prices are possibly negotiable", "5x5 minimum", "16 spawner minimum");
   return lines.join("\n");

@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { createBotClient } from "./bot/bot.js";
+import { initStorageFromDB } from "./bot/storage.js";
 import type { Client } from "discord.js";
 
 const rawPort = process.env["PORT"];
@@ -99,8 +100,13 @@ app.listen(port, (err) => {
   logger.info({ port }, "Server listening");
 
   if (process.env["BOT_ENABLED"] === "1") {
-    launchBot();
+    // Restore bot data from PostgreSQL if local file is missing, then launch
+    initStorageFromDB()
+      .catch((e) => logger.warn({ err: e }, "initStorageFromDB failed, continuing anyway"))
+      .finally(() => launchBot());
   } else {
     logger.info("Discord bot disabled (BOT_ENABLED not set). Set BOT_ENABLED=1 to enable.");
+    // Still initialise DB sync so any future writes are backed up
+    initStorageFromDB().catch(() => {});
   }
 });

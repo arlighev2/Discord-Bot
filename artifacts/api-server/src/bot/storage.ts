@@ -1,5 +1,75 @@
 import fs from "fs";
 import path from "path";
+import pg from "pg";
+
+const { Pool } = pg;
+
+// ── PostgreSQL backup pool ───────────────────────────────────────────────────
+let _dbPool: InstanceType<typeof Pool> | null = null;
+let _dbPoolReady = false;
+let _syncEnabled = false;
+
+async function ensureDBPool(): Promise<InstanceType<typeof Pool> | null> {
+  if (_dbPoolReady) return _dbPool;
+  _dbPoolReady = true;
+  if (!process.env["DATABASE_URL"]) return null;
+  try {
+    _dbPool = new Pool({ connectionString: process.env["DATABASE_URL"] });
+    await _dbPool.query(`
+      CREATE TABLE IF NOT EXISTS bot_data_backup (
+        id TEXT PRIMARY KEY,
+        data JSONB NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    return _dbPool;
+  } catch (err) {
+    console.error("[storage] Failed to init DB pool:", err);
+    _dbPool = null;
+    return null;
+  }
+}
+
+function syncToDB(data: BotData): void {
+  if (!_syncEnabled) return;
+  void (async () => {
+    const pool = await ensureDBPool();
+    if (!pool) return;
+    try {
+      await pool.query(
+        `INSERT INTO bot_data_backup (id, data, updated_at)
+         VALUES ('main', $1, NOW())
+         ON CONFLICT (id) DO UPDATE SET data = $1, updated_at = NOW()`,
+        [JSON.stringify(data)],
+      );
+    } catch (err) {
+      console.error("[storage] DB sync error:", err);
+    }
+  })();
+}
+
+export async function initStorageFromDB(): Promise<void> {
+  const pool = await ensureDBPool();
+  if (!pool) {
+    _syncEnabled = true;
+    return;
+  }
+  try {
+    if (!fs.existsSync(DATA_FILE)) {
+      const result = await pool.query<{ data: Partial<BotData> }>(
+        "SELECT data FROM bot_data_backup WHERE id = 'main'",
+      );
+      if (result.rows.length > 0 && result.rows[0]?.data) {
+        _data = { ...defaultData(), ...(result.rows[0].data as Partial<BotData>) };
+        saveData(_data);
+        console.log("[storage] Restored bot data from PostgreSQL backup.");
+      }
+    }
+  } catch (err) {
+    console.error("[storage] Failed to restore from DB:", err);
+  }
+  _syncEnabled = true;
+}
 
 export interface TicketEntry {
   userId: string;
@@ -126,14 +196,14 @@ function defaultData(): BotData {
     appBlacklist: {},
     reactionRoles: {},
     spawners: {
-      "Skeleton":   { buyPrice: "3.3m", sellPrice: "3.9m", stock: 209 },
-      "Iron Golem": { buyPrice: "5.5m", sellPrice: "9m",   stock: 0   },
+      "Skeleton":   { buyPrice: "3.3m", sellPrice: "4.1m", stock: 209 },
+      "Iron Golem": { buyPrice: "5.5m", sellPrice: "5.5m", stock: 0   },
       "Blaze":      { buyPrice: "2m",   sellPrice: null,    stock: 0   },
       "Pig":        { buyPrice: "2m",   sellPrice: null,    stock: 0   },
       "Cow":        { buyPrice: "2m",   sellPrice: null,    stock: 0   },
       "Spider":     { buyPrice: "4m",   sellPrice: null,    stock: 0   },
       "Piglin":     { buyPrice: "5m",   sellPrice: null,    stock: 0   },
-      "Creeper":    { buyPrice: "5m",   sellPrice: "8m",    stock: 0   },
+      "Creeper":    { buyPrice: "5m",   sellPrice: "2m",    stock: 0   },
     },
   };
 }
@@ -175,6 +245,7 @@ function saveData(data: BotData): void {
     // Fallback: write directly without atomic rename
     try { fs.writeFileSync(DATA_FILE, json, "utf8"); } catch {}
   }
+  syncToDB(data);
 }
 
 let _data = loadData();
